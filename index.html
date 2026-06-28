@@ -663,6 +663,27 @@ function downloadBackup(profiles, sessionMin, staff) {
 }
 const BACKUP_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7일
 const APP_VERSION = 'v2026.06.28';
+// 구글시트(Apps Script 웹앱)로 전체 데이터 전송. no-cors라 응답은 못 읽지만 전송은 됨
+function buildSheetPayload(profiles, facility, sessionMin) {
+  return {
+    app: '포시즌 기억정원',
+    facility: facility || '',
+    sessionMin,
+    exportedAt: new Date().toISOString(),
+    profiles
+  };
+}
+function syncToSheet(url, payload) {
+  if (!url) return Promise.resolve(false);
+  return fetch(url, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8'
+    },
+    body: JSON.stringify(payload)
+  }).then(() => true).catch(() => false);
+}
 
 /* ---------- 음성 안내 (Web Speech API, 없으면 조용히 무시) ---------- */
 let TTS_ON = (store.get('mg_tts') || 'on') === 'on';
@@ -6195,12 +6216,18 @@ function Settings({
   onSetEmoji,
   onSetGroupLevel,
   undoDel,
-  onRestoreDeleted
+  onRestoreDeleted,
+  sheetUrl,
+  syncState,
+  lastSync,
+  onSetSheetUrl,
+  onSyncNow
 }) {
   const fileRef = useRef();
   const [editZ, setEditZ] = useState(null);
   const [editE, setEditE] = useState(null); // 아바타 편집 중인 어르신 id
   const [editL, setEditL] = useState(null); // 단계 편집 중인 어르신 id
+  const [sheetDraft, setSheetDraft] = useState(sheetUrl || '');
   const [sName, setSName] = useState('');
   const [sPin, setSPin] = useState('');
   const [sErr, setSErr] = useState('');
@@ -6435,6 +6462,67 @@ function Settings({
       marginTop: 10
     }
   }, "내보내기를 누르면 ‘포시즌기억정원_백업_날짜.json’ 파일이 저장돼요.", /*#__PURE__*/React.createElement("br", null), "복원하면 지금 기록이 백업 내용으로 ", /*#__PURE__*/React.createElement("b", null, "덮어써져요"), ".")), /*#__PURE__*/React.createElement("div", {
+    className: "card"
+  }, /*#__PURE__*/React.createElement("h2", {
+    style: {
+      marginTop: 0
+    }
+  }, "☁️ 구글시트 자동 저장"), /*#__PURE__*/React.createElement("p", {
+    className: "muted small",
+    style: {
+      marginTop: -4
+    }
+  }, "구글시트 주소를 한 번 넣어두면, 기록이 바뀔 때마다 ", /*#__PURE__*/React.createElement("b", null, "자동으로 구글시트에 저장"), "돼요. 여러 기기에서 같은 시트를 공유할 수 있고, 시트에서 ", /*#__PURE__*/React.createElement("b", null, "어르신 요약·활동 기록"), "을 표로 한눈에 볼 수 있어요."), /*#__PURE__*/React.createElement("div", {
+    className: "field",
+    style: {
+      marginTop: 6
+    }
+  }, /*#__PURE__*/React.createElement("label", null, "구글시트 연결 주소 (Apps Script 웹앱 URL)"), /*#__PURE__*/React.createElement("input", {
+    value: sheetDraft,
+    onChange: e => setSheetDraft(e.target.value),
+    placeholder: "https://script.google.com/macros/s/.../exec",
+    style: {
+      width: '100%',
+      boxSizing: 'border-box',
+      padding: '10px 12px',
+      border: '1px solid var(--line)',
+      borderRadius: 10,
+      fontFamily: 'inherit',
+      fontSize: '.95em'
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "row",
+    style: {
+      marginTop: 8,
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "chip",
+    style: {
+      fontWeight: 800
+    },
+    onClick: () => onSetSheetUrl(sheetDraft)
+  }, "주소 저장"), sheetUrl && /*#__PURE__*/React.createElement("button", {
+    className: "chip",
+    onClick: onSyncNow
+  }, "지금 동기화"), sheetUrl && /*#__PURE__*/React.createElement("button", {
+    className: "chip",
+    style: {
+      color: 'var(--coral)',
+      borderColor: 'var(--coral)'
+    },
+    onClick: () => {
+      setSheetDraft('');
+      onSetSheetUrl('');
+    }
+  }, "연결 해제")), /*#__PURE__*/React.createElement("p", {
+    className: "muted small",
+    style: {
+      marginTop: 10
+    }
+  }, "상태: ", !sheetUrl ? '연결 안 됨' : syncState === 'syncing' ? '⏳ 저장 중…' : syncState === 'ok' ? `✅ 저장됨${lastSync ? ' · ' + new Date(lastSync).toLocaleString('ko-KR') : ''}` : syncState === 'err' ? '⚠️ 전송 실패(인터넷·주소 확인)' : lastSync ? `최근 저장 · ${new Date(lastSync).toLocaleString('ko-KR')}` : '대기 중'), /*#__PURE__*/React.createElement("p", {
+    className: "muted small"
+  }, "※ 연결 주소 만드는 방법은 따로 단계별로 안내해 드려요. (구글시트 → 확장 → Apps Script → 배포)")), /*#__PURE__*/React.createElement("div", {
     className: "card"
   }, /*#__PURE__*/React.createElement("h2", {
     style: {
@@ -6888,6 +6976,34 @@ function App() {
   const [ttsRate, setTtsRate] = useState(() => Number(store.get('mg_ttsrate') || 0.92));
   const [contrast, setContrast] = useState(() => store.get('mg_contrast') === 'on');
   const [fontScale, setFontScale] = useState(() => Number(store.get('mg_font') || 1));
+  const [sheetUrl, setSheetUrl] = useState(() => store.get('mg_sheeturl') || '');
+  const [syncState, setSyncState] = useState('idle'); // idle|syncing|ok|err
+  const [lastSync, setLastSync] = useState(() => Number(store.get('mg_lastsync') || 0));
+  const syncTimer = useRef(null);
+  function doSync() {
+    if (!sheetUrl) return;
+    setSyncState('syncing');
+    syncToSheet(sheetUrl, buildSheetPayload(profiles, facility, sessionMin)).then(ok => {
+      if (ok) {
+        const t = Date.now();
+        setLastSync(t);
+        store.set('mg_lastsync', t);
+        setSyncState('ok');
+      } else {
+        setSyncState('err');
+      }
+    });
+  }
+  // 기록·기관명이 바뀌면 1.5초 후 자동으로 구글시트에 전송
+  useEffect(() => {
+    if (!sheetUrl) return;
+    if (syncTimer.current) clearTimeout(syncTimer.current);
+    syncTimer.current = setTimeout(() => doSync(), 1500);
+    return () => {
+      if (syncTimer.current) clearTimeout(syncTimer.current);
+    };
+    // eslint-disable-next-line
+  }, [profiles, facility, sheetUrl]);
   useEffect(() => {
     document.documentElement.style.setProperty('--fs', fontScale);
     store.set('mg_font', fontScale);
@@ -7146,6 +7262,11 @@ function App() {
       } catch (e) {
         setBackupNeeded(true);
       }
+      if (sheetUrl) {
+        try {
+          doSync();
+        } catch (e) {}
+      }
     },
     onCancel: () => setScreen('login')
   }), cur && ['intro', 'game', 'result'].includes(screen) && (() => {
@@ -7240,6 +7361,16 @@ function App() {
     } : p)),
     undoDel: undoDel,
     onRestoreDeleted: restoreDeleted,
+    sheetUrl: sheetUrl,
+    syncState: syncState,
+    lastSync: lastSync,
+    onSetSheetUrl: v => {
+      const u = v.trim();
+      setSheetUrl(u);
+      store.set('mg_sheeturl', u);
+      if (!u) setSyncState('idle');
+    },
+    onSyncNow: doSync,
     onRestore: (imported, sMin, importedStaff) => {
       setProfiles(imported);
       if (sMin) {
