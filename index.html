@@ -712,7 +712,7 @@ function downloadBackup(profiles, sessionMin, staff) {
   }
 }
 const BACKUP_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7일
-const APP_VERSION = 'v2026.07.08f';
+const APP_VERSION = 'v2026.07.08g';
 // 구글시트(Apps Script 웹앱)로 전체 데이터 전송. no-cors라 응답은 못 읽지만 전송은 됨
 function buildSheetPayload(profiles, facility, sessionMin) {
   return {
@@ -8698,7 +8698,24 @@ function App() {
     key: gameKey + '_' + gameNonce,
     level: cur.levels[gameKey] ?? 2,
     onDone: finishGame
-  })), screen === 'result' && cur && resultData && (() => {
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "center no-print",
+    style: {
+      marginTop: 18
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "big-btn ghost",
+    style: {
+      maxWidth: 260,
+      margin: '0 auto'
+    },
+    onClick: () => {
+      try {
+        stopSpeak();
+      } catch (e) {}
+      setScreen('course');
+    }
+  }, "✕ 그만하기"))), screen === 'result' && cur && resultData && (() => {
     const today = new Date().toISOString().slice(0, 10);
     const done = cur.today === today ? cur.todayDone || {} : {};
     const nextDom = DOMAINS.find(d => !done[d.key]);
