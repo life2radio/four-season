@@ -8,6 +8,17 @@
 <meta http-equiv="Expires" content="0" />
 <title>포시즌 기억정원 · 어르신 인지자극</title>
 <link rel="manifest" href="manifest.json" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="포시즌 기억정원" />
+<meta property="og:title" content="포시즌 기억정원" />
+<meta property="og:description" content="사계절을 함께 걷는 어르신 인지 건강 프로그램" />
+<meta property="og:image" content="og.jpg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="포시즌 기억정원" />
+<meta name="twitter:description" content="사계절을 함께 걷는 어르신 인지 건강 프로그램" />
+<meta name="twitter:image" content="og.jpg" />
 <meta name="theme-color" content="#21402F" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -701,7 +712,7 @@ function downloadBackup(profiles, sessionMin, staff) {
   }
 }
 const BACKUP_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7일
-const APP_VERSION = 'v2026.07.08e';
+const APP_VERSION = 'v2026.07.08f';
 // 구글시트(Apps Script 웹앱)로 전체 데이터 전송. no-cors라 응답은 못 읽지만 전송은 됨
 function buildSheetPayload(profiles, facility, sessionMin) {
   return {
