@@ -689,6 +689,7 @@ function normalizeProfile(p) {
   return {
     id: p.id,
     name: p.name || '',
+    gender: p.gender || '',
     emoji: p.emoji || '👵',
     cist: p.cist || '',
     zodiac: p.zodiac || '',
@@ -750,7 +751,7 @@ function downloadBackup(profiles, sessionMin, staff) {
   }
 }
 const BACKUP_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7일
-const APP_VERSION = 'v2026.07.08l';
+const APP_VERSION = 'v2026.07.08o';
 // 구글시트(Apps Script 웹앱)로 전체 데이터 전송. no-cors라 응답은 못 읽지만 전송은 됨
 function buildSheetPayload(profiles, facility, sessionMin) {
   return {
@@ -5443,7 +5444,7 @@ function Home({
       fontSize: '1em'
     },
     onClick: onReport
-  }, "📊 기록"), isMain && /*#__PURE__*/React.createElement("button", {
+  }, "📊 기록"), /*#__PURE__*/React.createElement("button", {
     className: "big-btn ghost",
     style: {
       flex: 1,
@@ -5533,6 +5534,12 @@ function NewProfile({
   const [cist, setCist] = useState('');
   const [manual, setManual] = useState(null);
   const [zodiac, setZodiac] = useState('');
+  const [gender, setGender] = useState('');
+  function pickGender(g) {
+    setGender(g);
+    if (g === '남' && (emoji === '👵' || emoji === '')) setEmoji('👴');
+    if (g === '여' && (emoji === '👴' || emoji === '')) setEmoji('👵');
+  }
   function save() {
     if (!name.trim()) {
       alert('성함을 입력해 주세요.');
@@ -5544,6 +5551,7 @@ function NewProfile({
     onSave({
       id: Date.now(),
       name: name.trim(),
+      gender,
       emoji,
       cist,
       zodiac,
@@ -5565,6 +5573,14 @@ function NewProfile({
     onChange: e => setName(e.target.value),
     placeholder: "예) 김순자"
   })), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "성별"), /*#__PURE__*/React.createElement("div", {
+    className: "row"
+  }, ['남', '여'].map(g => /*#__PURE__*/React.createElement("button", {
+    key: g,
+    className: "chip" + (gender === g ? ' sel' : ''),
+    onClick: () => pickGender(gender === g ? '' : g)
+  }, g === '남' ? '👴 남' : '👵 여')))), /*#__PURE__*/React.createElement("div", {
     className: "field"
   }, /*#__PURE__*/React.createElement("label", null, "그림 고르기 ", /*#__PURE__*/React.createElement("span", {
     className: "muted small",
@@ -5643,6 +5659,101 @@ function NewProfile({
     onClick: onCancel
   }, "취소"));
 }
+function EditProfile({
+  profile,
+  onSave,
+  onCancel
+}) {
+  const [name, setName] = useState(profile.name || '');
+  const [gender, setGender] = useState(profile.gender || '');
+  const [emoji, setEmoji] = useState(profile.emoji || '👵');
+  const [zodiac, setZodiac] = useState(profile.zodiac || '');
+  function pickGender(g) {
+    setGender(g);
+    if (g === '남' && (emoji === '👵' || emoji === '')) setEmoji('👴');
+    if (g === '여' && (emoji === '👴' || emoji === '')) setEmoji('👵');
+  }
+  function save() {
+    if (!name.trim()) {
+      alert('성함을 입력해 주세요.');
+      return;
+    }
+    onSave({
+      ...profile,
+      name: name.trim(),
+      gender,
+      emoji,
+      zodiac
+    });
+  }
+  return /*#__PURE__*/React.createElement("div", {
+    className: "wrap"
+  }, /*#__PURE__*/React.createElement("h1", null, "어르신 정보 수정"), /*#__PURE__*/React.createElement("div", {
+    className: "card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "성함"), /*#__PURE__*/React.createElement("input", {
+    value: name,
+    onChange: e => setName(e.target.value),
+    placeholder: "예) 김순자"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "성별"), /*#__PURE__*/React.createElement("div", {
+    className: "row"
+  }, ['남', '여'].map(g => /*#__PURE__*/React.createElement("button", {
+    key: g,
+    className: "chip" + (gender === g ? ' sel' : ''),
+    onClick: () => pickGender(gender === g ? '' : g)
+  }, g === '남' ? '👴 남' : '👵 여')))), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "그림 고르기 ", /*#__PURE__*/React.createElement("span", {
+    className: "muted small",
+    style: {
+      fontWeight: 600
+    }
+  }, "(현재: ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: '1.2em'
+    }
+  }, emoji), ")")), /*#__PURE__*/React.createElement(AvatarPicker, {
+    value: emoji,
+    onPick: setEmoji
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "띠 (본인 확인용)"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(4,1fr)',
+      gap: 8
+    }
+  }, ZODIAC.map(([label, emo]) => /*#__PURE__*/React.createElement("button", {
+    key: label,
+    className: "chip" + (zodiac === label ? ' sel' : ''),
+    style: {
+      flexDirection: 'column',
+      padding: '8px 2px'
+    },
+    onClick: () => setZodiac(zodiac === label ? '' : label)
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: '1.4em'
+    }
+  }, emo), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: '.8em'
+    }
+  }, label))))), /*#__PURE__*/React.createElement("p", {
+    className: "muted small"
+  }, "※ 활동 기록·단계는 그대로 유지돼요. 이름·성별·그림·띠만 바뀝니다.")), /*#__PURE__*/React.createElement("button", {
+    className: "big-btn",
+    onClick: save
+  }, "저장"), /*#__PURE__*/React.createElement("div", {
+    className: "spacer"
+  }), /*#__PURE__*/React.createElement("button", {
+    className: "big-btn ghost",
+    onClick: onCancel
+  }, "취소"));
+}
 function Course({
   profile,
   sessionMin,
@@ -5653,7 +5764,8 @@ function Course({
   onHome,
   onReport,
   onReminisce,
-  onRecommend
+  onRecommend,
+  onEdit
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const done = profile.today === today ? profile.todayDone || {} : {};
@@ -5923,7 +6035,12 @@ function Course({
   }), /*#__PURE__*/React.createElement("button", {
     className: "big-btn ghost",
     onClick: onViewRecord
-  }, "📋 활동 기록 보기")), /*#__PURE__*/React.createElement("div", {
+  }, "📋 활동 기록 보기")), !isElder && onEdit && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "spacer"
+  }), /*#__PURE__*/React.createElement("button", {
+    className: "big-btn ghost",
+    onClick: onEdit
+  }, "✏️ 어르신 정보 수정 (이름·성별·띠)")), /*#__PURE__*/React.createElement("div", {
     className: "spacer"
   }), /*#__PURE__*/React.createElement("button", {
     className: "big-btn ghost",
@@ -7369,6 +7486,7 @@ function PinGate({
 }
 function Settings({
   profiles,
+  isMain,
   onDelete,
   onBack,
   sessionMin,
@@ -7381,6 +7499,7 @@ function Settings({
   staff,
   onAddStaff,
   onRemoveStaff,
+  onEditStaff,
   ttsRate,
   onSetTtsRate,
   contrast,
@@ -7412,6 +7531,11 @@ function Settings({
   const [sName, setSName] = useState('');
   const [sPin, setSPin] = useState('');
   const [sErr, setSErr] = useState('');
+  const [sAdded, setSAdded] = useState(null); // 방금 추가된 직원 안내 {name, code}
+  const [editStaffId, setEditStaffId] = useState(null);
+  const [esName, setEsName] = useState('');
+  const [esPin, setEsPin] = useState('');
+  const [esErr, setEsErr] = useState('');
   function addStaffLocal() {
     const nm = sName.trim();
     if (!nm) {
@@ -7432,9 +7556,44 @@ function Settings({
       return;
     }
     onAddStaff(nm, sPin);
+    setSAdded({
+      name: nm,
+      code: sPin
+    });
     setSName('');
     setSPin('');
     setSErr('');
+  }
+  function openEditStaff(s) {
+    setEditStaffId(s.id);
+    setEsName(s.name);
+    setEsPin('');
+    setEsErr('');
+  }
+  function saveEditStaff(s) {
+    const nm = esName.trim();
+    if (!nm) {
+      setEsErr('이름을 입력해 주세요.');
+      return;
+    }
+    if (esPin && !/^\d{4}$/.test(esPin)) {
+      setEsErr('새 코드는 숫자 4자리예요.');
+      return;
+    }
+    if (esPin) {
+      const h = hashPin(esPin);
+      if (store.get('mg_pin') === h) {
+        setEsErr('메인 관리자 비밀번호와 같은 코드는 쓸 수 없어요.');
+        return;
+      }
+      if ((staff || []).some(x => x.id !== s.id && x.pin === h)) {
+        setEsErr('이미 사용 중인 코드예요.');
+        return;
+      }
+    }
+    onEditStaff(s.id, nm, esPin || null);
+    setEditStaffId(null);
+    setEsErr('');
   }
   function confirmDelete(p) {
     if (window.confirm(`${p.name} 님의 기록을 정말 삭제할까요?\n(이 작업은 되돌릴 수 없어요)`)) {
@@ -7470,6 +7629,133 @@ function Settings({
       e.target.value = '';
     };
     reader.readAsText(f);
+  }
+  // ── 일반관리자(직원)용 제한 설정: 보기·소리 / 하루 활동 시간 / 앱 설치만 ──
+  if (!isMain) {
+    return /*#__PURE__*/React.createElement("div", {
+      className: "wrap"
+    }, /*#__PURE__*/React.createElement("h1", null, "⚙️ 설정"), /*#__PURE__*/React.createElement("div", {
+      className: "card"
+    }, /*#__PURE__*/React.createElement("h2", {
+      style: {
+        marginTop: 0
+      }
+    }, "👀 보기·소리 (접근성)"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 6
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontWeight: 700
+      }
+    }, "음성 읽기 속도"), /*#__PURE__*/React.createElement("span", {
+      style: {
+        display: 'flex',
+        gap: 6
+      }
+    }, [['느리게', 0.8], ['보통', 0.92], ['빠르게', 1.05]].map(([lbl, v]) => /*#__PURE__*/React.createElement("button", {
+      key: lbl,
+      className: "chip" + (Math.abs(ttsRate - v) < 0.001 ? ' sel' : ''),
+      style: {
+        padding: '8px 12px'
+      },
+      onClick: () => {
+        onSetTtsRate(v);
+        setTimeout(() => {
+          try {
+            const u = new SpeechSynthesisUtterance('이 속도예요');
+            u.lang = 'ko-KR';
+            u.rate = v;
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(u);
+          } catch (e) {}
+        }, 50);
+      }
+    }, lbl)))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 14
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontWeight: 700
+      }
+    }, "고대비 모드 ", /*#__PURE__*/React.createElement("span", {
+      className: "muted small",
+      style: {
+        fontWeight: 600
+      }
+    }, "(글자·테두리 진하게)")), /*#__PURE__*/React.createElement("button", {
+      className: "chip" + (contrast ? ' sel' : ''),
+      style: {
+        padding: '8px 16px'
+      },
+      onClick: () => onSetContrast(!contrast)
+    }, contrast ? '켜짐' : '꺼짐'))), /*#__PURE__*/React.createElement("div", {
+      className: "card"
+    }, /*#__PURE__*/React.createElement("h2", {
+      style: {
+        marginTop: 0
+      }
+    }, "하루 활동 시간"), /*#__PURE__*/React.createElement("p", {
+      className: "muted small",
+      style: {
+        marginTop: -4
+      }
+    }, "‘오늘의 추천 활동’이 이 시간쯤 되면 마무리돼요."), /*#__PURE__*/React.createElement("div", {
+      className: "row",
+      style: {
+        marginTop: 8
+      }
+    }, [10, 15, 20].map(m => /*#__PURE__*/React.createElement("button", {
+      key: m,
+      className: "chip" + (sessionMin === m ? ' sel' : ''),
+      onClick: () => onSessionMin(m)
+    }, m, "분")))), /*#__PURE__*/React.createElement("div", {
+      className: "card"
+    }, /*#__PURE__*/React.createElement("h2", {
+      style: {
+        marginTop: 0
+      }
+    }, "📲 앱으로 설치"), installed ? /*#__PURE__*/React.createElement("p", {
+      className: "muted small",
+      style: {
+        marginTop: -4
+      }
+    }, "이미 ", /*#__PURE__*/React.createElement("b", null, "앱으로 실행 중"), "이에요. ✅") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+      className: "muted small",
+      style: {
+        marginTop: -4
+      }
+    }, "홈 화면에 아이콘을 만들어, ", /*#__PURE__*/React.createElement("b", null, "앱처럼 전체 화면"), "으로 쓸 수 있어요."), /*#__PURE__*/React.createElement("button", {
+      className: "big-btn",
+      onClick: () => {
+        if (!onInstall()) setShowInstallHelp(true);
+      }
+    }, "📲 홈 화면에 앱 설치하기"), (!canInstall || showInstallHelp) && /*#__PURE__*/React.createElement("div", {
+      className: "muted small",
+      style: {
+        marginTop: 10,
+        lineHeight: 1.7,
+        background: 'var(--sky)',
+        border: '1px solid #CFE0D2',
+        borderRadius: 10,
+        padding: '10px 12px'
+      }
+    }, /*#__PURE__*/React.createElement("b", null, "설치 버튼이 안 눌리면:"), /*#__PURE__*/React.createElement("br", null), "• ", /*#__PURE__*/React.createElement("b", null, "아이폰·아이패드"), "(사파리): 공유 버튼 → ‘홈 화면에 추가’", /*#__PURE__*/React.createElement("br", null), "• ", /*#__PURE__*/React.createElement("b", null, "안드로이드"), "(크롬): 메뉴 ⋮ → ‘앱 설치’", /*#__PURE__*/React.createElement("br", null), "• ", /*#__PURE__*/React.createElement("b", null, "PC 크롬"), ": 주소창 오른쪽 설치 아이콘(⊕)"))), /*#__PURE__*/React.createElement("p", {
+      className: "muted small center",
+      style: {
+        opacity: .7
+      }
+    }, "버전 ", APP_VERSION, " · 그 외 설정은 메인 관리자만 열 수 있어요"), /*#__PURE__*/React.createElement("button", {
+      className: "big-btn ghost",
+      onClick: onBack
+    }, "← 처음으로"));
   }
   return /*#__PURE__*/React.createElement("div", {
     className: "wrap"
@@ -7793,29 +8079,123 @@ function Settings({
     }
   }, "아직 등록된 일반 관리자가 없어요."), (staff || []).map(s => /*#__PURE__*/React.createElement("div", {
     key: s.id,
+    style: {
+      borderBottom: '1px dashed var(--line)',
+      padding: '8px 0'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
     className: "report-row",
     style: {
-      padding: '8px 0',
-      borderBottom: '1px dashed var(--line)'
+      padding: 0
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "rd-emo"
   }, "🧑‍⚕️"), /*#__PURE__*/React.createElement("div", {
-    className: "rd-body"
+    className: "rd-body",
+    style: {
+      cursor: 'pointer'
+    },
+    onClick: () => editStaffId === s.id ? setEditStaffId(null) : openEditStaff(s)
   }, /*#__PURE__*/React.createElement("div", {
     className: "rd-nm"
-  }, s.name), /*#__PURE__*/React.createElement("div", {
+  }, s.name, " ", /*#__PURE__*/React.createElement("span", {
     className: "muted small"
-  }, "일반 관리자")), /*#__PURE__*/React.createElement("button", {
+  }, "▾")), /*#__PURE__*/React.createElement("div", {
+    className: "muted small"
+  }, "일반 관리자 · 눌러서 이름·코드 수정")), /*#__PURE__*/React.createElement("button", {
+    className: "chip",
+    onClick: () => editStaffId === s.id ? setEditStaffId(null) : openEditStaff(s)
+  }, "✏️ 수정")), editStaffId === s.id && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 8,
+      padding: '10px 12px',
+      background: 'var(--sky)',
+      border: '1px solid #CFE0D2',
+      borderRadius: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "이름"), /*#__PURE__*/React.createElement("input", {
+    value: esName,
+    onChange: e => {
+      setEsName(e.target.value);
+      setEsErr('');
+    },
+    placeholder: "이름"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "로그인 코드 재설정 ", /*#__PURE__*/React.createElement("span", {
+    className: "muted small"
+  }, "(바꿀 때만 입력)")), /*#__PURE__*/React.createElement("input", {
+    value: esPin,
+    inputMode: "numeric",
+    onChange: e => {
+      setEsPin(e.target.value.replace(/\D/g, '').slice(0, 4));
+      setEsErr('');
+    },
+    placeholder: "새 4자리 (안 바꾸면 비워두세요)"
+  })), /*#__PURE__*/React.createElement("p", {
+    className: "muted small",
+    style: {
+      marginTop: -2
+    }
+  }, "※ 보안상 ", /*#__PURE__*/React.createElement("b", null, "기존 코드는 볼 수 없어요."), " 코드를 확인·변경하려면 새 4자리로 재설정하세요."), esErr && /*#__PURE__*/React.createElement("p", {
+    style: {
+      color: 'var(--coral)',
+      fontWeight: 700,
+      margin: '2px 0 8px'
+    }
+  }, esErr), /*#__PURE__*/React.createElement("div", {
+    className: "row",
+    style: {
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "chip",
+    style: {
+      fontWeight: 800
+    },
+    onClick: () => saveEditStaff(s)
+  }, "저장"), /*#__PURE__*/React.createElement("button", {
+    className: "chip",
+    onClick: () => setEditStaffId(null)
+  }, "닫기"), /*#__PURE__*/React.createElement("button", {
     className: "chip",
     style: {
       borderColor: 'var(--coral)',
       color: 'var(--coral)'
     },
     onClick: () => {
-      if (window.confirm(`‘${s.name}’ 관리자 계정을 삭제할까요?`)) onRemoveStaff(s.id);
+      if (window.confirm(`‘${s.name}’ 관리자 계정을 삭제할까요?`)) {
+        onRemoveStaff(s.id);
+        setEditStaffId(null);
+      }
     }
-  }, "🗑 삭제"))), /*#__PURE__*/React.createElement("div", {
+  }, "🗑 삭제"))))), sAdded && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 12,
+      padding: '12px 14px',
+      background: 'var(--gold-bg)',
+      border: '1px solid var(--amber)',
+      borderRadius: 12
+    }
+  }, /*#__PURE__*/React.createElement("b", null, "✅ ‘", sAdded.name, "’ 님 추가 완료!"), /*#__PURE__*/React.createElement("div", {
+    className: "small",
+    style: {
+      marginTop: 4
+    }
+  }, "이제 바로 쓸 수 있어요 — 로그인 화면 → ", /*#__PURE__*/React.createElement("b", null, "관리자(치료사) 로그인"), " → 코드 ", /*#__PURE__*/React.createElement("b", {
+    style: {
+      fontSize: '1.15em',
+      color: 'var(--green-d)'
+    }
+  }, sAdded.code), " 입력."), /*#__PURE__*/React.createElement("button", {
+    className: "chip",
+    style: {
+      marginTop: 8
+    },
+    onClick: () => setSAdded(null)
+  }, "확인")), /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 12
     }
@@ -7852,7 +8232,7 @@ function Settings({
     style: {
       marginTop: 8
     }
-  }, "※ 등록 후, 이 사람은 로그인 화면 → 관리자 로그인에서 위 4자리 코드를 입력하면 돼요."))), /*#__PURE__*/React.createElement("div", {
+  }, "※ 추가하면 바로 그 코드로 로그인해 이용할 수 있어요."))), /*#__PURE__*/React.createElement("div", {
     className: "card"
   }, /*#__PURE__*/React.createElement("h2", {
     style: {
@@ -8661,6 +9041,15 @@ function App() {
       pin: hashPin(pin)
     }]);
   }
+  function editStaff(id, name, newPin) {
+    setStaff(s => s.map(x => x.id === id ? {
+      ...x,
+      name: name.trim(),
+      ...(newPin ? {
+        pin: hashPin(newPin)
+      } : {})
+    } : x));
+  }
   function removeStaff(id) {
     setStaff(s => s.filter(x => x.id !== id));
   }
@@ -8962,8 +9351,9 @@ function App() {
   }), screen === 'new' && /*#__PURE__*/React.createElement(NewProfile, {
     onSave: saveNew,
     onCancel: () => setScreen('home')
-  }), screen === 'settings' && isMain && /*#__PURE__*/React.createElement(Settings, {
+  }), screen === 'settings' && mode === 'admin' && /*#__PURE__*/React.createElement(Settings, {
     profiles: profiles,
+    isMain: isMain,
     onDelete: deleteProfile,
     onBack: () => {
       setUndoDel(null);
@@ -8977,6 +9367,7 @@ function App() {
     staff: staff,
     onAddStaff: addStaff,
     onRemoveStaff: removeStaff,
+    onEditStaff: editStaff,
     ttsRate: ttsRate,
     onSetTtsRate: setTtsRate,
     contrast: contrast,
@@ -9054,7 +9445,15 @@ function App() {
       setReportFrom('course');
       setScreen('report');
     },
+    onEdit: mode === 'admin' ? () => setScreen('editProfile') : null,
     onReminisce: () => setScreen('reminisce')
+  }), screen === 'editProfile' && cur && mode === 'admin' && /*#__PURE__*/React.createElement(EditProfile, {
+    profile: cur,
+    onSave: up => {
+      setProfiles(ps => ps.map(p => p.id === up.id ? up : p));
+      setScreen('course');
+    },
+    onCancel: () => setScreen('course')
   }), screen === 'reminisce' && cur && /*#__PURE__*/React.createElement(Reminisce, {
     onFlower: () => setProfiles(ps => ps.map(p => {
       if (p.id !== curId) return p;
