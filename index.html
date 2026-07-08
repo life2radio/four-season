@@ -682,6 +682,34 @@ const loadStaff = () => {
   }
 };
 const saveStaff = s => store.set('mg_staff', JSON.stringify(s));
+// 원격(Firebase)에서 읽은 어르신 데이터 형태 보정 — 빈 배열/객체가 사라져 생기는 오류 방지
+function normalizeProfile(p) {
+  p = p || {};
+  const hist = Array.isArray(p.history) ? p.history : p.history && typeof p.history === 'object' ? Object.keys(p.history).map(k => p.history[k]) : [];
+  return {
+    id: p.id,
+    name: p.name || '',
+    emoji: p.emoji || '👵',
+    cist: p.cist || '',
+    zodiac: p.zodiac || '',
+    levels: p.levels && typeof p.levels === 'object' ? p.levels : {},
+    garden: p.garden || 0,
+    history: hist,
+    today: p.today || '',
+    todayDone: p.todayDone && typeof p.todayDone === 'object' ? p.todayDone : {},
+    todaySec: p.todaySec || 0,
+    lastActive: p.lastActive || 0,
+    guardianNote: p.guardianNote || '',
+    certNo: p.certNo
+  };
+}
+function cleanForFb(p) {
+  try {
+    return JSON.parse(JSON.stringify(p));
+  } catch (e) {
+    return p;
+  }
+}
 /* 설정 잠금용 간단 해시(평문 저장 방지 · 가벼운 접근 차단용) */
 function hashPin(s) {
   let h = 5381;
@@ -722,7 +750,7 @@ function downloadBackup(profiles, sessionMin, staff) {
   }
 }
 const BACKUP_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7일
-const APP_VERSION = 'v2026.07.08j';
+const APP_VERSION = 'v2026.07.08k';
 // 구글시트(Apps Script 웹앱)로 전체 데이터 전송. no-cors라 응답은 못 읽지만 전송은 됨
 function buildSheetPayload(profiles, facility, sessionMin) {
   return {
@@ -8258,10 +8286,19 @@ function App() {
   }
 
   // ── 실시간 연동 (Firebase Realtime DB) ──
-  const [orgCode, setOrgCode] = useState(() => store.get('mg_orgcode') || '');
+  const [orgCode, setOrgCode] = useState(() => {
+    try {
+      if (/[?&]off/.test(window.location.search)) {
+        store.set('mg_orgcode', '');
+        return '';
+      }
+    } catch (e) {}
+    return store.get('mg_orgcode') || '';
+  });
   const [fbSync, setFbSync] = useState("off"); // off|connecting|live|error
   const applyingRemote = useRef(false);
   const prevIds = useRef(new Set());
+  const lastApplied = useRef('');
   const profilesRef = useRef(profiles);
   useEffect(() => {
     profilesRef.current = profiles;
@@ -8277,7 +8314,7 @@ function App() {
     return () => window.removeEventListener('fb-ready', on);
   }, []);
 
-  // 연결/구독 (업로드 먼저 → 구독, 원격이 비면 로컬을 복구해 데이터 보호)
+  // 연결/구독 (형태 보정 + 타임아웃 + 에코 방지, 어떤 경우에도 화면을 멈추지 않음)
   useEffect(() => {
     if (!orgCode || !fbReady) {
       setFbSync(orgCode && !fbReady ? 'error' : 'off');
@@ -8292,43 +8329,64 @@ function App() {
       return;
     }
     let active = true;
-    ref.once('value').then(snap => {
-      if (!active) return;
-      const remote = snap.val() || {};
-      // 이 기기에만 있는 어르신은 원격에 올려두기(기존 원격 우선)
-      profilesRef.current.forEach(p => {
-        if (!remote[String(p.id)]) {
-          try {
-            ref.child(String(p.id)).set(p);
-          } catch (e) {}
+    // 8초 안에 연결 안 되면 에러 표시(앱은 계속 정상)
+    const to = setTimeout(() => {
+      if (active) setFbSync(s => s === 'live' ? s : 'error');
+    }, 8000);
+    try {
+      ref.once('value').then(snap => {
+        if (!active) return;
+        let remote = {};
+        try {
+          remote = snap.val() || {};
+        } catch (e) {
+          remote = {};
         }
-      });
-      // 실시간 구독
-      ref.on('value', snap2 => {
-        const val = snap2.val() || {};
-        const list = Object.keys(val).map(k => val[k]);
-        if (list.length === 0 && profilesRef.current.length > 0) {
-          // 원격이 비었는데 로컬 기록이 있으면 → 로컬을 다시 올려 복구(삭제 방지)
-          profilesRef.current.forEach(p => {
+        profilesRef.current.forEach(p => {
+          if (p && !remote[String(p.id)]) {
             try {
-              ref.child(String(p.id)).set(p);
+              ref.child(String(p.id)).set(cleanForFb(p));
             } catch (e) {}
-          });
-          setFbSync('live');
-          return;
-        }
-        applyingRemote.current = true;
-        setProfiles(list);
-        saveProfiles(list);
-        prevIds.current = new Set(list.map(p => p.id));
-        setFbSync('live');
-        setTimeout(() => {
-          applyingRemote.current = false;
-        }, 0);
-      }, () => setFbSync('error'));
-    }).catch(() => setFbSync('error'));
+          }
+        });
+        ref.on('value', snap2 => {
+          try {
+            const val = snap2.val() || {};
+            const list = Object.keys(val).map(k => normalizeProfile(val[k])).filter(p => p && p.id != null);
+            if (list.length === 0 && profilesRef.current.length > 0) {
+              profilesRef.current.forEach(p => {
+                try {
+                  ref.child(String(p.id)).set(cleanForFb(p));
+                } catch (e) {}
+              });
+              setFbSync('live');
+              return;
+            }
+            const js = JSON.stringify(list);
+            if (js === lastApplied.current) {
+              setFbSync('live');
+              return;
+            } // 에코 무시
+            lastApplied.current = js;
+            applyingRemote.current = true;
+            setProfiles(list);
+            saveProfiles(list);
+            prevIds.current = new Set(list.map(p => p.id));
+            setFbSync('live');
+            setTimeout(() => {
+              applyingRemote.current = false;
+            }, 0);
+          } catch (e) {
+            setFbSync('error');
+          }
+        }, () => setFbSync('error'));
+      }).catch(() => setFbSync('error'));
+    } catch (e) {
+      setFbSync('error');
+    }
     return () => {
       active = false;
+      clearTimeout(to);
       try {
         ref.off();
       } catch (e) {}
@@ -8338,11 +8396,7 @@ function App() {
 
   // 로컬 변경 → 원격 반영 (원격 적용 중이면 건너뜀)
   useEffect(() => {
-    if (!orgCode || !fbReady) {
-      prevIds.current = new Set(profiles.map(p => p.id));
-      return;
-    }
-    if (applyingRemote.current) {
+    if (!orgCode || !fbReady || applyingRemote.current) {
       prevIds.current = new Set(profiles.map(p => p.id));
       return;
     }
@@ -8355,7 +8409,7 @@ function App() {
     const curIds = new Set(profiles.map(p => p.id));
     profiles.forEach(p => {
       try {
-        ref.child(String(p.id)).set(p);
+        ref.child(String(p.id)).set(cleanForFb(p));
       } catch (e) {}
     });
     prevIds.current.forEach(id => {
@@ -8370,13 +8424,14 @@ function App() {
   }, [profiles]);
   function connectOrg(code) {
     const c = (code || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    lastApplied.current = '';
     setOrgCode(c);
     store.set('mg_orgcode', c);
   }
   function disconnectOrg() {
     setOrgCode('');
     store.set('mg_orgcode', '');
-    setSyncState('off');
+    setFbSync('off');
   }
   const [adminName, setAdminName] = useState('');
   const [staff, setStaff] = useState(loadStaff);
