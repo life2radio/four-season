@@ -92,14 +92,24 @@
   .pill{display:inline-block; background:var(--gold-bg); color:#7C5E2A;
     padding:6px 16px; border-radius:30px; font-weight:700; font-size:.85em;}
 
+  .card{ counter-reset: optn; }
   .opt-btn{width:100%; background:var(--card); border:2px solid var(--line);
-    border-radius:14px; padding:20px 16px; font-size:1.25em; font-weight:700;
-    margin:10px 0; text-align:center; transition:.08s; box-shadow:0 1px 2px rgba(42,39,35,.04); position:relative;}
-  .opt-btn:active{transform:scale(.985);}
+    border-radius:14px; padding:22px 16px; font-size:1.35em; font-weight:700; min-height:66px;
+    margin:12px 0; text-align:center; transition:transform .06s, background .1s, border-color .1s;
+    box-shadow:0 1px 2px rgba(42,39,35,.05); position:relative; cursor:pointer;
+    touch-action:manipulation; -webkit-tap-highlight-color:rgba(62,124,79,.28); user-select:none;}
+  .opt-btn:not(.no-num){ counter-increment:optn; }
+  .opt-btn:not(.no-num)::before{ content:counter(optn); position:absolute; left:8px; top:8px;
+    width:1.7em; height:1.7em; line-height:1.7em; text-align:center;
+    border-radius:50%; background:var(--green); color:#fff; font-weight:800; font-size:.8em; box-shadow:0 1px 3px rgba(0,0,0,.18);}
+  .opt-btn:active{transform:scale(.97); background:#E7F1EA; border-color:var(--green);
+    box-shadow:inset 0 2px 10px rgba(62,124,79,.28);}
   .opt-btn.correct{border-color:var(--green); background:var(--sky); color:var(--green-d);}
   .opt-btn.wrong{border-color:var(--coral); background:#F7EAE6; color:var(--coral);}
   .opt-btn.correct::after{content:"✓"; position:absolute; top:8px; right:12px; font-size:.95em; font-weight:900; color:var(--green);}
   .opt-btn.wrong::after{content:"✗"; position:absolute; top:8px; right:12px; font-size:.95em; font-weight:900; color:var(--coral);}
+  .opt-btn:not(.no-num).correct::before{ background:var(--green); }
+  .opt-btn:not(.no-num).wrong::before{ background:var(--coral); }
 
   /* 고대비 모드 */
   body.hc{ --ink:#15120E; --muted:#4A4438; --line:#B7AC92; --green-d:#173E2A; --coral:#9A3320; }
@@ -712,7 +722,7 @@ function downloadBackup(profiles, sessionMin, staff) {
   }
 }
 const BACKUP_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7일
-const APP_VERSION = 'v2026.07.08g';
+const APP_VERSION = 'v2026.07.08h';
 // 구글시트(Apps Script 웹앱)로 전체 데이터 전송. no-cors라 응답은 못 읽지만 전송은 됨
 function buildSheetPayload(profiles, facility, sessionMin) {
   return {
@@ -3396,7 +3406,7 @@ function GameStroop({
     className: "grid2"
   }, STROOP.map((c, idx) => /*#__PURE__*/React.createElement("button", {
     key: idx,
-    className: "opt-btn",
+    className: "opt-btn no-num",
     style: {
       margin: 0,
       color: '#fff',
@@ -4314,7 +4324,7 @@ function GameOrder({
     const pos = chosen.indexOf(idx);
     return /*#__PURE__*/React.createElement("button", {
       key: idx,
-      className: "opt-btn",
+      className: "opt-btn no-num",
       style: {
         margin: '8px 0',
         textAlign: 'left',
