@@ -43,6 +43,8 @@
     line-height:1.5; -webkit-font-smoothing:antialiased;
   }
   #root{max-width:760px; margin:0 auto; min-height:100vh;}
+  @media (min-width:820px){ #root{max-width:900px;} .wrap{padding:22px 26px 44px;} }
+  @media (min-width:1200px){ #root{max-width:1040px;} }
   button{font-family:inherit; cursor:pointer; border:none;}
   .wrap{padding:18px 18px 40px;}
   .topbar{display:flex; align-items:center; gap:10px; padding:12px 14px;
@@ -120,7 +122,7 @@
   body.hc .big-btn.ghost{ border-width:2px; border-color:#9A8F76; }
   body.hc .progress{ border:1px solid #9A8F76; }
 
-  .tile{aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;
+  .tile{aspect-ratio:1/1; min-height:60px; display:flex; align-items:center; justify-content:center;
     font-size:2.4em; background:#F3EFE4; border:3px solid var(--line); border-radius:16px;
     user-select:none; transition:.1s;}
   .tile.flip{background:var(--card); border-color:var(--amber);}
@@ -136,14 +138,14 @@
   .garden{background:linear-gradient(180deg,#F3F5F0 0%, #EAF0EB 100%);
     border:1px solid var(--line); border-radius:14px; overflow:hidden;}
   /* 사계절 나무 + 피어나는 꽃 */
-  .tree-stage{position:relative; width:100%; aspect-ratio:600/623;}
+  .tree-stage{position:relative; width:100%; height:0; padding-bottom:103.8%;}
   @keyframes mhpulse{ 0%,100%{ box-shadow:0 0 0 3px rgba(62,124,79,.95), 0 0 10px 3px rgba(62,124,79,.45);}
     50%{ box-shadow:0 0 0 4px rgba(62,124,79,.6), 0 0 18px 6px rgba(62,124,79,.30);} }
   .mh-glow{ animation:mhpulse 1.05s ease-in-out infinite; }
   @keyframes mhtake{ 0%{ box-shadow:0 0 0 3px var(--amber);} 50%{ box-shadow:0 0 0 6px rgba(201,130,31,.55);} 100%{ box-shadow:0 0 0 3px var(--amber);} }
   .mh-take{ animation:mhtake .5s ease-in-out 2; }
-  .tree-stage > img{position:absolute; inset:0; width:100%; height:100%; object-fit:contain;}
-  .blossom{position:absolute; width:10%; max-width:42px; aspect-ratio:1/1;
+  .tree-stage > img{position:absolute; top:0; left:0; right:0; bottom:0; width:100%; height:100%; object-fit:contain;}
+  .blossom{position:absolute; width:38px; height:38px;
     transform:translate(-50%,-50%) scale(0); transform-origin:center;
     animation:bloom .6s cubic-bezier(.34,1.56,.64,1) forwards;
     filter:drop-shadow(0 1px 1px rgba(0,0,0,.12));}
@@ -216,7 +218,7 @@
   .hero-rule{width:30px; height:2px; background:var(--line); border-radius:2px; margin:14px auto 0;}
 
   /* 꽃가루 효과 */
-  .confetti{position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:60;}
+  .confetti{position:fixed; top:0; left:0; right:0; bottom:0; pointer-events:none; overflow:hidden; z-index:60;}
   .confetti i{position:absolute; top:-40px; font-size:1.7em; animation:fall linear forwards;}
   @keyframes fall{ to{ transform:translateY(115vh) rotate(560deg); opacity:.85; } }
 
@@ -258,7 +260,7 @@
   .cert-page{ container-type:inline-size; position:relative; width:100%; max-width:620px; margin:6px auto 0;
     aspect-ratio:210/297; background:#FFFDF7; box-sizing:border-box; overflow:hidden;
     border-radius:4px; box-shadow:0 8px 30px rgba(42,39,35,.20); color:#1f1c17;}
-  .cert-border{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0;}
+  .cert-border{ position:absolute; top:0; left:0; right:0; bottom:0; width:100%; height:100%; pointer-events:none; z-index:0;}
   .cert-wm{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:40cqw; opacity:.045; pointer-events:none;}
   .cert-body2{ position:absolute; top:8.5cqw; right:10cqw; bottom:8.5cqw; left:10cqw; display:flex; flex-direction:column;}
   .cert-top{ display:flex; justify-content:space-between; align-items:baseline; font-size:2.35cqw; color:#6a6354; letter-spacing:.02em; flex:0 0 auto;}
@@ -716,7 +718,8 @@ function normalizeProfile(p) {
     todaySec: p.todaySec || 0,
     lastActive: p.lastActive || 0,
     guardianNote: p.guardianNote || '',
-    certNo: p.certNo
+    certNo: p.certNo,
+    easy: !!p.easy
   };
 }
 function cleanForFb(p) {
@@ -766,7 +769,7 @@ function downloadBackup(profiles, sessionMin, staff) {
   }
 }
 var BACKUP_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7일
-var APP_VERSION = 'v2026.07.08x';
+var APP_VERSION = 'v2026.07.09d';
 // 구글시트(Apps Script 웹앱)로 전체 데이터 전송. no-cors라 응답은 못 읽지만 전송은 됨
 function buildSheetPayload(profiles, facility, sessionMin) {
   return {
@@ -1070,6 +1073,8 @@ var CHALLENGES = [{
   color: '#B23A2E'
 }];
 var ALL_ACTS = DOMAINS.concat(CHALLENGES);
+// 중등도(쉬움) 모드 — 아주 쉽고 익숙한 활동만
+var EASY_ACTS = ['orient', 'memory', 'attn', 'hwatu', 'category', 'missing'];
 var REMIN_META = {
   key: 'reminisce',
   name: '추억 이야기',
@@ -1108,8 +1113,8 @@ var COG_GROUPS = [{
 }];
 var groupOfKey = k => (COG_GROUPS.find(g => g.keys.includes(k)) || {}).name;
 // 다음 활동 추천: 오늘 아직 안 한 활동 우선 → 방금 한 영역과 다른 영역 우선 → 모두 했으면 반복 허용
-function recommendNext(doneKeys = [], justKey = null) {
-  var allKeys = ALL_ACTS.map(a => a.key); // 26개 활동(회상 제외)
+function recommendNext(doneKeys = [], justKey = null, allowKeys = null) {
+  var allKeys = allowKeys && allowKeys.length ? allowKeys.slice() : ALL_ACTS.map(a => a.key);
   var avail = allKeys.filter(k => !doneKeys.includes(k) && k !== justKey);
   if (avail.length === 0) {
     // 오늘 모든 활동을 다 함 → 반복 허용
@@ -1554,21 +1559,29 @@ var SEASON_INFO = {
   spring: {
     label: '봄',
     word: '벚꽃',
+    grow: '꽃',
+    verb: '피었어요',
     emoji: '🌸'
   },
   summer: {
     label: '여름',
     word: '초록잎',
+    grow: '잎',
+    verb: '돋았어요',
     emoji: '🌿'
   },
   autumn: {
     label: '가을',
     word: '단풍',
+    grow: '단풍',
+    verb: '물들었어요',
     emoji: '🍁'
   },
   winter: {
     label: '겨울',
     word: '눈',
+    grow: '눈',
+    verb: '내렸어요',
     emoji: '❄️'
   }
 };
@@ -1851,13 +1864,14 @@ function GameResult({
 }) {
   var up = newLv > prevLv,
     down = newLv < prevLv;
+  var S = SEASON_INFO[seasonNow()];
   useEffect(() => {
     if (sessionDone) {
       speak(`오늘 활동을 마쳤어요. ${sessionDone.count}가지 활동, 수고 많으셨어요.`);
       return;
     }
     var base = acc >= 0.8 ? '정말 잘하셨어요! 한 단계 올라갔어요.' : acc >= 0.5 ? '잘하셨어요. 오늘도 한 걸음 나아갔어요.' : '괜찮아요. 천천히 또 해보면 더 좋아져요.';
-    speak(stageUp ? base + ' 나무에 새 꽃이 한 송이 피었어요!' : base);
+    speak(stageUp ? base + ` 나무에 새 ${S.grow}이 하나 ${S.verb}!` : base);
   }, []);
 
   // 시간 마무리 화면
@@ -1878,7 +1892,7 @@ function GameResult({
       style: {
         color: 'var(--coral)'
       }
-    }, "🌸 나무에 새 꽃이 피었어요!")), /*#__PURE__*/React.createElement("p", {
+    }, S.emoji, " 나무에 새 ", S.grow, "이 ", S.verb, "!")), /*#__PURE__*/React.createElement("p", {
       className: "muted small"
     }, "내일 또 만나요. 매일 조금씩이 가장 좋아요."), /*#__PURE__*/React.createElement("button", {
       className: "big-btn amber",
@@ -1889,7 +1903,7 @@ function GameResult({
     className: "card center"
   }, stageUp && /*#__PURE__*/React.createElement(Confetti, null), /*#__PURE__*/React.createElement("div", {
     className: "reward-big"
-  }, stageUp ? '🌸' : allDone ? '🏆' : acc >= 0.8 ? '🌟' : acc >= 0.5 ? '😊' : '🌱'), /*#__PURE__*/React.createElement("h2", null, stageUp ? '꽃이 피었어요!' : allDone ? '오늘 활동 모두 완료!' : acc >= 0.8 ? '아주 잘하셨어요!' : acc >= 0.5 ? '잘하셨어요!' : '수고하셨어요!'), /*#__PURE__*/React.createElement("p", {
+  }, stageUp ? S.emoji : allDone ? '🏆' : acc >= 0.8 ? '🌟' : acc >= 0.5 ? '😊' : '🌱'), /*#__PURE__*/React.createElement("h2", null, stageUp ? `${S.grow}이 ${S.verb}!` : allDone ? '오늘 활동 모두 완료!' : acc >= 0.8 ? '아주 잘하셨어요!' : acc >= 0.5 ? '잘하셨어요!' : '수고하셨어요!'), /*#__PURE__*/React.createElement("p", {
     className: "lead"
   }, Math.round(acc * 100), "점 맞히셨어요.", /*#__PURE__*/React.createElement("br", null), up && /*#__PURE__*/React.createElement("b", {
     style: {
@@ -1899,7 +1913,7 @@ function GameResult({
     style: {
       color: 'var(--coral)'
     }
-  }, "🌸 나무에 새 꽃이 한 송이 피었어요!")), allDone && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("b", {
+  }, S.emoji, " 나무에 새 ", S.grow, "이 하나 ", S.verb, "!")), allDone && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("b", {
     style: {
       color: 'var(--amber)'
     }
@@ -2189,7 +2203,10 @@ function HwatuBack() {
   return /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'absolute',
-      inset: 0,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
       borderRadius: 9,
       background: 'linear-gradient(135deg,#7C241C,#9E3B30)',
       display: 'flex',
@@ -2199,7 +2216,7 @@ function HwatuBack() {
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       width: '46%',
-      aspectRatio: '1',
+      height: '46%',
       borderRadius: '50%',
       border: '2px solid #D8B86A',
       display: 'flex',
@@ -2209,7 +2226,7 @@ function HwatuBack() {
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       width: '56%',
-      aspectRatio: '1',
+      height: '56%',
       borderRadius: '50%',
       background: '#D8B86A',
       opacity: .9
@@ -2345,7 +2362,9 @@ function GameHwatu({
     onClick: () => flip(c),
     style: {
       position: 'relative',
-      aspectRatio: '3/4',
+      width: '100%',
+      height: 0,
+      paddingBottom: '133%',
       borderRadius: 10,
       overflow: 'hidden',
       cursor: 'pointer',
@@ -2359,6 +2378,9 @@ function GameHwatu({
     src: HWATU_IMG[c.key],
     alt: "",
     style: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
       width: '100%',
       height: '100%',
       objectFit: 'cover'
@@ -2452,7 +2474,8 @@ function MiniCard({
     style: {
       position: 'relative',
       width: '100%',
-      aspectRatio: '3/4',
+      height: 0,
+      paddingBottom: '133%',
       borderRadius: 9,
       overflow: 'hidden',
       border: '1px solid var(--line)',
@@ -2466,6 +2489,9 @@ function MiniCard({
     src: MINHWA_IMG[k],
     alt: m ? m.mon : '',
     style: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
       width: '100%',
       height: '100%',
       objectFit: 'cover'
@@ -2480,7 +2506,8 @@ function MiniCard({
       color: '#fff',
       background: 'rgba(0,0,0,.45)',
       borderRadius: 6,
-      padding: '0 4px'
+      padding: '0 4px',
+      zIndex: 2
     }
   }, m ? m.mon : ''));
 }
@@ -4217,6 +4244,7 @@ function GameSimon({
     onClick: () => tap(idx),
     style: {
       aspectRatio: '1/1',
+      height: 130,
       borderRadius: 18,
       cursor: 'pointer',
       background: active === idx ? c[1] : c[0],
@@ -6003,6 +6031,10 @@ function NewProfile({
     _useState274 = _slicedToArray(_useState273, 2),
     gender = _useState274[0],
     setGender = _useState274[1];
+  var _useState275 = useState(false),
+    _useState276 = _slicedToArray(_useState275, 2),
+    easy = _useState276[0],
+    setEasy = _useState276[1];
   function pickGender(g) {
     setGender(g);
     if (g === '남' && (emoji === '👵' || emoji === '')) setEmoji('👴');
@@ -6020,6 +6052,7 @@ function NewProfile({
       id: Date.now(),
       name: name.trim(),
       gender,
+      easy,
       emoji,
       cist,
       zodiac,
@@ -6049,6 +6082,21 @@ function NewProfile({
     className: "chip" + (gender === g ? ' sel' : ''),
     onClick: () => pickGender(gender === g ? '' : g)
   }, g === '남' ? '👴 남' : '👵 여')))), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "인지 수준"), /*#__PURE__*/React.createElement("div", {
+    className: "row"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "chip" + (!easy ? ' sel' : ''),
+    onClick: () => setEasy(false)
+  }, "양호 (보통 활동)"), /*#__PURE__*/React.createElement("button", {
+    className: "chip" + (easy ? ' sel' : ''),
+    onClick: () => setEasy(true)
+  }, "중등도 · 쉬움")), /*#__PURE__*/React.createElement("p", {
+    className: "muted small",
+    style: {
+      marginTop: 4
+    }
+  }, "‘중등도·쉬움’은 아주 쉬운 활동만, 가장 쉬운 단계로 나와요.")), /*#__PURE__*/React.createElement("div", {
     className: "field"
   }, /*#__PURE__*/React.createElement("label", null, "그림 고르기 ", /*#__PURE__*/React.createElement("span", {
     className: "muted small",
@@ -6132,22 +6180,26 @@ function EditProfile({
   onSave,
   onCancel
 }) {
-  var _useState275 = useState(profile.name || ''),
-    _useState276 = _slicedToArray(_useState275, 2),
-    name = _useState276[0],
-    setName = _useState276[1];
-  var _useState277 = useState(profile.gender || ''),
+  var _useState277 = useState(profile.name || ''),
     _useState278 = _slicedToArray(_useState277, 2),
-    gender = _useState278[0],
-    setGender = _useState278[1];
-  var _useState279 = useState(profile.emoji || '👵'),
+    name = _useState278[0],
+    setName = _useState278[1];
+  var _useState279 = useState(profile.gender || ''),
     _useState280 = _slicedToArray(_useState279, 2),
-    emoji = _useState280[0],
-    setEmoji = _useState280[1];
-  var _useState281 = useState(profile.zodiac || ''),
+    gender = _useState280[0],
+    setGender = _useState280[1];
+  var _useState281 = useState(profile.emoji || '👵'),
     _useState282 = _slicedToArray(_useState281, 2),
-    zodiac = _useState282[0],
-    setZodiac = _useState282[1];
+    emoji = _useState282[0],
+    setEmoji = _useState282[1];
+  var _useState283 = useState(profile.zodiac || ''),
+    _useState284 = _slicedToArray(_useState283, 2),
+    zodiac = _useState284[0],
+    setZodiac = _useState284[1];
+  var _useState285 = useState(!!profile.easy),
+    _useState286 = _slicedToArray(_useState285, 2),
+    easy = _useState286[0],
+    setEasy = _useState286[1];
   function pickGender(g) {
     setGender(g);
     if (g === '남' && (emoji === '👵' || emoji === '')) setEmoji('👴');
@@ -6161,6 +6213,7 @@ function EditProfile({
     onSave(_objectSpread(_objectSpread({}, profile), {}, {
       name: name.trim(),
       gender,
+      easy,
       emoji,
       zodiac
     }));
@@ -6184,6 +6237,21 @@ function EditProfile({
     className: "chip" + (gender === g ? ' sel' : ''),
     onClick: () => pickGender(gender === g ? '' : g)
   }, g === '남' ? '👴 남' : '👵 여')))), /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "인지 수준"), /*#__PURE__*/React.createElement("div", {
+    className: "row"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "chip" + (!easy ? ' sel' : ''),
+    onClick: () => setEasy(false)
+  }, "양호 (보통 활동)"), /*#__PURE__*/React.createElement("button", {
+    className: "chip" + (easy ? ' sel' : ''),
+    onClick: () => setEasy(true)
+  }, "중등도 · 쉬움")), /*#__PURE__*/React.createElement("p", {
+    className: "muted small",
+    style: {
+      marginTop: 4
+    }
+  }, "‘중등도·쉬움’은 아주 쉬운 활동만, 가장 쉬운 단계로 나와요.")), /*#__PURE__*/React.createElement("div", {
     className: "field"
   }, /*#__PURE__*/React.createElement("label", null, "그림 고르기 ", /*#__PURE__*/React.createElement("span", {
     className: "muted small",
@@ -6251,8 +6319,8 @@ function Course({
   var doneCount = Object.keys(done).length;
   var todaySec = profile.today === today ? profile.todaySec || 0 : 0;
   var todayMin = Math.floor(todaySec / 60);
-  var dayDone = todaySec >= (sessionMin || 15) * 60;
-  var timePct = Math.min(100, Math.round(todaySec / ((sessionMin || 15) * 60) * 100));
+  var dayDone = todaySec >= (sessionMin || 5) * 60;
+  var timePct = Math.min(100, Math.round(todaySec / ((sessionMin || 5) * 60) * 100));
   useEffect(() => {
     if (dayDone) speak(`${profile.name} 님, 오늘 활동을 다 하셨어요. 내일 또 만나요.`);else speak(`${profile.name} 님, 오늘도 만나서 반가워요.`);
   }, []);
@@ -6401,7 +6469,7 @@ function Course({
       margin: '4px 2px'
     },
     className: "muted"
-  }, /*#__PURE__*/React.createElement("span", null, "⏱ 오늘 활동 시간"), /*#__PURE__*/React.createElement("span", null, "약 ", todayMin, "분 / ", sessionMin || 15, "분")), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("span", null, "⏱ 오늘 활동 시간"), /*#__PURE__*/React.createElement("span", null, "약 ", todayMin, "분 / ", sessionMin || 5, "분")), /*#__PURE__*/React.createElement("div", {
     className: "progress"
   }, /*#__PURE__*/React.createElement("span", {
     style: {
@@ -6448,14 +6516,14 @@ function Course({
       fontSize: '1.05em',
       marginTop: 22
     }
-  }, "골라서 하기"), /*#__PURE__*/React.createElement("p", {
+  }, "활동 고르기"), /*#__PURE__*/React.createElement("p", {
     className: "muted small",
     style: {
       marginTop: -6
     }
-  }, "추천 대신 직접 고르고 싶을 때만 쓰세요."), /*#__PURE__*/React.createElement("div", {
+  }, profile.easy ? '쉬운 활동만 보여드려요.' : '추천 대신 직접 고르고 싶을 때만 쓰세요.'), /*#__PURE__*/React.createElement("div", {
     className: "grid2"
-  }, DOMAINS.map(d => {
+  }, (profile.easy ? ALL_ACTS.filter(a => EASY_ACTS.includes(a.key)) : ALL_ACTS).map(d => {
     var _profile$levels$d$key;
     var isDone = !!done[d.key];
     return /*#__PURE__*/React.createElement("button", {
@@ -6470,48 +6538,7 @@ function Course({
       className: "nm"
     }, d.name), /*#__PURE__*/React.createElement("div", {
       className: "lv"
-    }, d.sub, " · ", (_profile$levels$d$key = profile.levels[d.key]) !== null && _profile$levels$d$key !== void 0 ? _profile$levels$d$key : 2, "단계"));
-  })), /*#__PURE__*/React.createElement("h2", {
-    style: {
-      marginTop: 24,
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      width: 10,
-      height: 10,
-      borderRadius: 3,
-      background: 'var(--amber)',
-      display: 'inline-block'
-    }
-  }), "도전 활동 ", /*#__PURE__*/React.createElement("span", {
-    className: "muted small",
-    style: {
-      fontWeight: 600
-    }
-  }, "조금 더 어려워요")), /*#__PURE__*/React.createElement("div", {
-    className: "grid2"
-  }, CHALLENGES.map(d => {
-    var _profile$levels$d$key2;
-    var isDone = !!done[d.key];
-    return /*#__PURE__*/React.createElement("button", {
-      key: d.key,
-      className: "domain-card" + (isDone ? ' done' : ''),
-      style: {
-        borderColor: isDone ? 'var(--green)' : 'var(--amber)'
-      },
-      onClick: () => onPlay(d.key)
-    }, isDone && /*#__PURE__*/React.createElement("span", {
-      className: "check"
-    }, "✓"), /*#__PURE__*/React.createElement("div", {
-      className: "emo"
-    }, d.emo), /*#__PURE__*/React.createElement("div", {
-      className: "nm"
-    }, d.name), /*#__PURE__*/React.createElement("div", {
-      className: "lv"
-    }, d.sub, " · ", (_profile$levels$d$key2 = profile.levels[d.key]) !== null && _profile$levels$d$key2 !== void 0 ? _profile$levels$d$key2 : 2, "단계"));
+    }, d.sub, profile.easy ? '' : ` · ${(_profile$levels$d$key = profile.levels[d.key]) !== null && _profile$levels$d$key !== void 0 ? _profile$levels$d$key : 2}단계`));
   })), /*#__PURE__*/React.createElement("div", {
     className: "spacer"
   }), /*#__PURE__*/React.createElement("button", {
@@ -7264,23 +7291,23 @@ function Report({
   dataOnly,
   onCert
 }) {
-  var _useState283 = useState(() => new Date().getFullYear() * 100 + (new Date().getMonth() + 1)),
-    _useState284 = _slicedToArray(_useState283, 2),
-    narrSeed = _useState284[0],
-    setNarrSeed = _useState284[1];
-  var _useState285 = useState(() => new Date().getFullYear() * 100 + (new Date().getMonth() + 1)),
-    _useState286 = _slicedToArray(_useState285, 2),
-    noteSeed = _useState286[0],
-    setNoteSeed = _useState286[1];
-  var autoNote = buildClinicalNote(profile, noteSeed);
-  var _useState287 = useState(profile.guardianNote || autoNote),
+  var _useState287 = useState(() => new Date().getFullYear() * 100 + (new Date().getMonth() + 1)),
     _useState288 = _slicedToArray(_useState287, 2),
-    note = _useState288[0],
-    setNote = _useState288[1];
-  var _useState289 = useState(null),
+    narrSeed = _useState288[0],
+    setNarrSeed = _useState288[1];
+  var _useState289 = useState(() => new Date().getFullYear() * 100 + (new Date().getMonth() + 1)),
     _useState290 = _slicedToArray(_useState289, 2),
-    copied = _useState290[0],
-    setCopied = _useState290[1];
+    noteSeed = _useState290[0],
+    setNoteSeed = _useState290[1];
+  var autoNote = buildClinicalNote(profile, noteSeed);
+  var _useState291 = useState(profile.guardianNote || autoNote),
+    _useState292 = _slicedToArray(_useState291, 2),
+    note = _useState292[0],
+    setNote = _useState292[1];
+  var _useState293 = useState(null),
+    _useState294 = _slicedToArray(_useState293, 2),
+    copied = _useState294[0],
+    setCopied = _useState294[1];
   var guardianMsg = buildGuardianMessage(profile, facility);
   var orgName = facility || '포시즌 물리치료실';
   var todayStr = new Date().toISOString().slice(0, 10);
@@ -7831,7 +7858,7 @@ function Certificate({
     className: "colon"
   }, ":"), /*#__PURE__*/React.createElement("span", {
     className: "val"
-  }, days, "일 · 활동 ", acts, "회 · 꽃 ", flowers, "송이")), /*#__PURE__*/React.createElement("p", {
+  }, days, "일 · 활동 ", acts, "회 · 나무 ", flowers, "칸")), /*#__PURE__*/React.createElement("p", {
     className: "cert-text"
   }, "위 어르신께서는 포시즌 기억정원 인지 건강 활동에", /*#__PURE__*/React.createElement("br", null), "한결같은 정성으로 꾸준히 참여하시어", /*#__PURE__*/React.createElement("br", null), "위와 같은 아름다운 성과를 이루셨기에,", /*#__PURE__*/React.createElement("br", null), "그 노력과 마음을 기리어 이 상장을 드립니다."), /*#__PURE__*/React.createElement("div", {
     className: "cert-date"
@@ -7868,22 +7895,22 @@ function PinGate({
   onSuccess,
   onCancel
 }) {
-  var _useState291 = useState(creating ? 'new' : hasPin ? 'enter' : 'new'),
-    _useState292 = _slicedToArray(_useState291, 2),
-    stage = _useState292[0],
-    setStage = _useState292[1];
-  var _useState293 = useState(''),
-    _useState294 = _slicedToArray(_useState293, 2),
-    entry = _useState294[0],
-    setEntry = _useState294[1];
-  var _useState295 = useState(''),
+  var _useState295 = useState(creating ? 'new' : hasPin ? 'enter' : 'new'),
     _useState296 = _slicedToArray(_useState295, 2),
-    first = _useState296[0],
-    setFirst = _useState296[1];
+    stage = _useState296[0],
+    setStage = _useState296[1];
   var _useState297 = useState(''),
     _useState298 = _slicedToArray(_useState297, 2),
-    err = _useState298[0],
-    setErr = _useState298[1];
+    entry = _useState298[0],
+    setEntry = _useState298[1];
+  var _useState299 = useState(''),
+    _useState300 = _slicedToArray(_useState299, 2),
+    first = _useState300[0],
+    setFirst = _useState300[1];
+  var _useState301 = useState(''),
+    _useState302 = _slicedToArray(_useState301, 2),
+    err = _useState302[0],
+    setErr = _useState302[1];
   var title = stage === 'enter' ? '관리자 비밀번호' : stage === 'new' ? creating ? '새 비밀번호 만들기' : '비밀번호 만들기' : '다시 한 번 입력';
   var hint = stage === 'enter' ? '관리자 비밀번호 4자리를 입력하세요' : stage === 'new' ? '숫자 4자리를 정하세요' : '확인을 위해 같은 번호를 한 번 더 누르세요';
   useEffect(() => {
@@ -8054,78 +8081,78 @@ function Settings({
   onDisconnectOrg
 }) {
   var fileRef = useRef();
-  var _useState299 = useState(null),
-    _useState300 = _slicedToArray(_useState299, 2),
-    editZ = _useState300[0],
-    setEditZ = _useState300[1];
-  var _useState301 = useState(null),
-    _useState302 = _slicedToArray(_useState301, 2),
-    editE = _useState302[0],
-    setEditE = _useState302[1]; // 아바타 편집 중인 어르신 id
   var _useState303 = useState(null),
     _useState304 = _slicedToArray(_useState303, 2),
-    editL = _useState304[0],
-    setEditL = _useState304[1]; // 단계 편집 중인 어르신 id
+    editZ = _useState304[0],
+    setEditZ = _useState304[1];
   var _useState305 = useState(null),
     _useState306 = _slicedToArray(_useState305, 2),
-    editN = _useState306[0],
-    setEditN = _useState306[1]; // 이름·성별 편집 중인 어르신 id
-  var _useState307 = useState(''),
+    editE = _useState306[0],
+    setEditE = _useState306[1]; // 아바타 편집 중인 어르신 id
+  var _useState307 = useState(null),
     _useState308 = _slicedToArray(_useState307, 2),
-    enName = _useState308[0],
-    setEnName = _useState308[1];
-  var _useState309 = useState(''),
+    editL = _useState308[0],
+    setEditL = _useState308[1]; // 단계 편집 중인 어르신 id
+  var _useState309 = useState(null),
     _useState310 = _slicedToArray(_useState309, 2),
-    enGender = _useState310[0],
-    setEnGender = _useState310[1];
-  var _useState311 = useState(sheetUrl || ''),
+    editN = _useState310[0],
+    setEditN = _useState310[1]; // 이름·성별 편집 중인 어르신 id
+  var _useState311 = useState(''),
     _useState312 = _slicedToArray(_useState311, 2),
-    sheetDraft = _useState312[0],
-    setSheetDraft = _useState312[1];
-  var _useState313 = useState(false),
+    enName = _useState312[0],
+    setEnName = _useState312[1];
+  var _useState313 = useState(''),
     _useState314 = _slicedToArray(_useState313, 2),
-    showInstallHelp = _useState314[0],
-    setShowInstallHelp = _useState314[1];
-  var _useState315 = useState(orgCode || 'foursea'),
+    enGender = _useState314[0],
+    setEnGender = _useState314[1];
+  var _useState315 = useState(sheetUrl || ''),
     _useState316 = _slicedToArray(_useState315, 2),
-    orgDraft = _useState316[0],
-    setOrgDraft = _useState316[1];
-  var _useState317 = useState(''),
+    sheetDraft = _useState316[0],
+    setSheetDraft = _useState316[1];
+  var _useState317 = useState(false),
     _useState318 = _slicedToArray(_useState317, 2),
-    resetWord = _useState318[0],
-    setResetWord = _useState318[1];
-  var _useState319 = useState(''),
+    showInstallHelp = _useState318[0],
+    setShowInstallHelp = _useState318[1];
+  var _useState319 = useState(orgCode || 'foursea'),
     _useState320 = _slicedToArray(_useState319, 2),
-    sName = _useState320[0],
-    setSName = _useState320[1];
+    orgDraft = _useState320[0],
+    setOrgDraft = _useState320[1];
   var _useState321 = useState(''),
     _useState322 = _slicedToArray(_useState321, 2),
-    sPin = _useState322[0],
-    setSPin = _useState322[1];
+    resetWord = _useState322[0],
+    setResetWord = _useState322[1];
   var _useState323 = useState(''),
     _useState324 = _slicedToArray(_useState323, 2),
-    sErr = _useState324[0],
-    setSErr = _useState324[1];
-  var _useState325 = useState(null),
+    sName = _useState324[0],
+    setSName = _useState324[1];
+  var _useState325 = useState(''),
     _useState326 = _slicedToArray(_useState325, 2),
-    sAdded = _useState326[0],
-    setSAdded = _useState326[1]; // 방금 추가된 직원 안내 {name, code}
-  var _useState327 = useState(null),
+    sPin = _useState326[0],
+    setSPin = _useState326[1];
+  var _useState327 = useState(''),
     _useState328 = _slicedToArray(_useState327, 2),
-    editStaffId = _useState328[0],
-    setEditStaffId = _useState328[1];
-  var _useState329 = useState(''),
+    sErr = _useState328[0],
+    setSErr = _useState328[1];
+  var _useState329 = useState(null),
     _useState330 = _slicedToArray(_useState329, 2),
-    esName = _useState330[0],
-    setEsName = _useState330[1];
-  var _useState331 = useState(''),
+    sAdded = _useState330[0],
+    setSAdded = _useState330[1]; // 방금 추가된 직원 안내 {name, code}
+  var _useState331 = useState(null),
     _useState332 = _slicedToArray(_useState331, 2),
-    esPin = _useState332[0],
-    setEsPin = _useState332[1];
+    editStaffId = _useState332[0],
+    setEditStaffId = _useState332[1];
   var _useState333 = useState(''),
     _useState334 = _slicedToArray(_useState333, 2),
-    esErr = _useState334[0],
-    setEsErr = _useState334[1];
+    esName = _useState334[0],
+    setEsName = _useState334[1];
+  var _useState335 = useState(''),
+    _useState336 = _slicedToArray(_useState335, 2),
+    esPin = _useState336[0],
+    setEsPin = _useState336[1];
+  var _useState337 = useState(''),
+    _useState338 = _slicedToArray(_useState337, 2),
+    esErr = _useState338[0],
+    setEsErr = _useState338[1];
   function addStaffLocal() {
     var nm = sName.trim();
     if (!nm) {
@@ -8302,7 +8329,7 @@ function Settings({
       style: {
         marginTop: 8
       }
-    }, [10, 15, 20].map(m => /*#__PURE__*/React.createElement("button", {
+    }, [5, 10, 15, 20].map(m => /*#__PURE__*/React.createElement("button", {
       key: m,
       className: "chip" + (sessionMin === m ? ' sel' : ''),
       onClick: () => onSessionMin(m)
@@ -8477,7 +8504,7 @@ function Settings({
     style: {
       marginTop: 8
     }
-  }, [10, 15, 20].map(m => /*#__PURE__*/React.createElement("button", {
+  }, [5, 10, 15, 20].map(m => /*#__PURE__*/React.createElement("button", {
     key: m,
     className: "chip" + (sessionMin === m ? ' sel' : ''),
     onClick: () => onSessionMin(m)
@@ -9300,18 +9327,18 @@ function ElderLogin({
   onSubmit,
   onBack
 }) {
-  var _useState335 = useState(''),
-    _useState336 = _slicedToArray(_useState335, 2),
-    name = _useState336[0],
-    setName = _useState336[1];
-  var _useState337 = useState(''),
-    _useState338 = _slicedToArray(_useState337, 2),
-    z = _useState338[0],
-    setZ = _useState338[1];
   var _useState339 = useState(''),
     _useState340 = _slicedToArray(_useState339, 2),
-    err = _useState340[0],
-    setErr = _useState340[1];
+    name = _useState340[0],
+    setName = _useState340[1];
+  var _useState341 = useState(''),
+    _useState342 = _slicedToArray(_useState341, 2),
+    z = _useState342[0],
+    setZ = _useState342[1];
+  var _useState343 = useState(''),
+    _useState344 = _slicedToArray(_useState343, 2),
+    err = _useState344[0],
+    setErr = _useState344[1];
   useEffect(() => {
     speak('성함을 적고, 본인 띠를 골라주세요.');
   }, []);
@@ -9395,36 +9422,36 @@ function ElderLogin({
 }
 function App() {
   var _cur$levels$gameKey2, _cur$levels$gameKey3;
-  var _useState341 = useState(loadProfiles),
-    _useState342 = _slicedToArray(_useState341, 2),
-    profiles = _useState342[0],
-    setProfiles = _useState342[1];
-  var _useState343 = useState(null),
-    _useState344 = _slicedToArray(_useState343, 2),
-    mode = _useState344[0],
-    setMode = _useState344[1]; // null(로그아웃) | 'admin' | 'elder'
-  var _useState345 = useState(null),
+  var _useState345 = useState(loadProfiles),
     _useState346 = _slicedToArray(_useState345, 2),
-    adminRole = _useState346[0],
-    setAdminRole = _useState346[1]; // 'main'(대표) | 'staff'(간호사 등)
-  var _useState347 = useState(false),
+    profiles = _useState346[0],
+    setProfiles = _useState346[1];
+  var _useState347 = useState(null),
     _useState348 = _slicedToArray(_useState347, 2),
-    backupNeeded = _useState348[0],
-    setBackupNeeded = _useState348[1]; // 자동백업이 막혔을 때 알림
-  var _useState349 = useState(typeof window !== 'undefined' && !!window.__deferredPrompt),
+    mode = _useState348[0],
+    setMode = _useState348[1]; // null(로그아웃) | 'admin' | 'elder'
+  var _useState349 = useState(null),
     _useState350 = _slicedToArray(_useState349, 2),
-    canInstall = _useState350[0],
-    setCanInstall = _useState350[1];
-  var _useState351 = useState(() => {
+    adminRole = _useState350[0],
+    setAdminRole = _useState350[1]; // 'main'(대표) | 'staff'(간호사 등)
+  var _useState351 = useState(false),
+    _useState352 = _slicedToArray(_useState351, 2),
+    backupNeeded = _useState352[0],
+    setBackupNeeded = _useState352[1]; // 자동백업이 막혔을 때 알림
+  var _useState353 = useState(typeof window !== 'undefined' && !!window.__deferredPrompt),
+    _useState354 = _slicedToArray(_useState353, 2),
+    canInstall = _useState354[0],
+    setCanInstall = _useState354[1];
+  var _useState355 = useState(() => {
       try {
         return window.matchMedia && window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
       } catch (e) {
         return false;
       }
     }),
-    _useState352 = _slicedToArray(_useState351, 2),
-    installed = _useState352[0],
-    setInstalled = _useState352[1];
+    _useState356 = _slicedToArray(_useState355, 2),
+    installed = _useState356[0],
+    setInstalled = _useState356[1];
   useEffect(() => {
     var onI = () => setCanInstall(true);
     var onDone = () => {
@@ -9452,7 +9479,7 @@ function App() {
   }
 
   // ── 실시간 연동 (Firebase Realtime DB) ──
-  var _useState353 = useState(() => {
+  var _useState357 = useState(() => {
       try {
         if (/[?&]off/.test(window.location.search)) {
           store.set('mg_orgcode', '');
@@ -9461,13 +9488,13 @@ function App() {
       } catch (e) {}
       return store.get('mg_orgcode') || '';
     }),
-    _useState354 = _slicedToArray(_useState353, 2),
-    orgCode = _useState354[0],
-    setOrgCode = _useState354[1];
-  var _useState355 = useState("off"),
-    _useState356 = _slicedToArray(_useState355, 2),
-    fbSync = _useState356[0],
-    setFbSync = _useState356[1]; // off|connecting|live|error
+    _useState358 = _slicedToArray(_useState357, 2),
+    orgCode = _useState358[0],
+    setOrgCode = _useState358[1];
+  var _useState359 = useState("off"),
+    _useState360 = _slicedToArray(_useState359, 2),
+    fbSync = _useState360[0],
+    setFbSync = _useState360[1]; // off|connecting|live|error
   var applyingRemote = useRef(false);
   var prevIds = useRef(new Set());
   var lastApplied = useRef('');
@@ -9475,10 +9502,10 @@ function App() {
   useEffect(() => {
     profilesRef.current = profiles;
   }, [profiles]);
-  var _useState357 = useState(() => typeof window !== 'undefined' && !!window.__fbdb),
-    _useState358 = _slicedToArray(_useState357, 2),
-    fbReady = _useState358[0],
-    setFbReady = _useState358[1];
+  var _useState361 = useState(() => typeof window !== 'undefined' && !!window.__fbdb),
+    _useState362 = _slicedToArray(_useState361, 2),
+    fbReady = _useState362[0],
+    setFbReady = _useState362[1];
   useEffect(() => {
     if (window.__fbdb) {
       setFbReady(true);
@@ -9608,14 +9635,14 @@ function App() {
     store.set('mg_orgcode', '');
     setFbSync('off');
   }
-  var _useState359 = useState(''),
-    _useState360 = _slicedToArray(_useState359, 2),
-    adminName = _useState360[0],
-    setAdminName = _useState360[1];
-  var _useState361 = useState(loadStaff),
-    _useState362 = _slicedToArray(_useState361, 2),
-    staff = _useState362[0],
-    setStaff = _useState362[1];
+  var _useState363 = useState(''),
+    _useState364 = _slicedToArray(_useState363, 2),
+    adminName = _useState364[0],
+    setAdminName = _useState364[1];
+  var _useState365 = useState(loadStaff),
+    _useState366 = _slicedToArray(_useState365, 2),
+    staff = _useState366[0],
+    setStaff = _useState366[1];
 
   // 직원 계정(일반관리자) 실시간 동기화
   var applyingRemoteStaff = useRef(false);
@@ -9713,14 +9740,14 @@ function App() {
     prevStaffIds.current = curIds;
     // eslint-disable-next-line
   }, [staff]);
-  var _useState363 = useState('login'),
-    _useState364 = _slicedToArray(_useState363, 2),
-    screen = _useState364[0],
-    setScreen = _useState364[1]; // login|elderLogin|adminLogin|home|new|course|game|result|report
-  var _useState365 = useState(0),
-    _useState366 = _slicedToArray(_useState365, 2),
-    pinBump = _useState366[0],
-    setPinBump = _useState366[1]; // 원격 비번 반영 시 재렌더용
+  var _useState367 = useState('login'),
+    _useState368 = _slicedToArray(_useState367, 2),
+    screen = _useState368[0],
+    setScreen = _useState368[1]; // login|elderLogin|adminLogin|home|new|course|game|result|report
+  var _useState369 = useState(0),
+    _useState370 = _slicedToArray(_useState369, 2),
+    pinBump = _useState370[0],
+    setPinBump = _useState370[1]; // 원격 비번 반영 시 재렌더용
   // 대표님 비밀번호(mg_pin) 실시간 공유
   useEffect(() => {
     if (!orgCode || !fbReady) return;
@@ -9776,66 +9803,66 @@ function App() {
       } catch (e) {}
     }
   }
-  var _useState367 = useState(null),
-    _useState368 = _slicedToArray(_useState367, 2),
-    curId = _useState368[0],
-    setCurId = _useState368[1];
-  var _useState369 = useState(null),
-    _useState370 = _slicedToArray(_useState369, 2),
-    gameKey = _useState370[0],
-    setGameKey = _useState370[1];
-  var _useState371 = useState(0),
+  var _useState371 = useState(null),
     _useState372 = _slicedToArray(_useState371, 2),
-    gameNonce = _useState372[0],
-    setGameNonce = _useState372[1];
+    curId = _useState372[0],
+    setCurId = _useState372[1];
   var _useState373 = useState(null),
     _useState374 = _slicedToArray(_useState373, 2),
-    resultData = _useState374[0],
-    setResultData = _useState374[1];
-  var _useState375 = useState('course'),
+    gameKey = _useState374[0],
+    setGameKey = _useState374[1];
+  var _useState375 = useState(0),
     _useState376 = _slicedToArray(_useState375, 2),
-    reportFrom = _useState376[0],
-    setReportFrom = _useState376[1];
+    gameNonce = _useState376[0],
+    setGameNonce = _useState376[1];
   var _useState377 = useState(null),
     _useState378 = _slicedToArray(_useState377, 2),
-    session = _useState378[0],
-    setSession = _useState378[1]; // 추천 세션 {start,count,groups}
-  var _useState379 = useState(() => Number(store.get('mg_sessionmin') || 15)),
+    resultData = _useState378[0],
+    setResultData = _useState378[1];
+  var _useState379 = useState('course'),
     _useState380 = _slicedToArray(_useState379, 2),
-    sessionMin = _useState380[0],
-    setSessionMin = _useState380[1];
-  var _useState381 = useState(() => store.get('mg_facility') || ''),
+    reportFrom = _useState380[0],
+    setReportFrom = _useState380[1];
+  var _useState381 = useState(null),
     _useState382 = _slicedToArray(_useState381, 2),
-    facility = _useState382[0],
-    setFacility = _useState382[1];
-  var _useState383 = useState(TTS_ON),
+    session = _useState382[0],
+    setSession = _useState382[1]; // 추천 세션 {start,count,groups}
+  var _useState383 = useState(() => Number(store.get('mg_sessionmin') || 5)),
     _useState384 = _slicedToArray(_useState383, 2),
-    ttsOn = _useState384[0],
-    setTtsOn = _useState384[1];
-  var _useState385 = useState(() => Number(store.get('mg_ttsrate') || 0.92)),
+    sessionMin = _useState384[0],
+    setSessionMin = _useState384[1];
+  var _useState385 = useState(() => store.get('mg_facility') || ''),
     _useState386 = _slicedToArray(_useState385, 2),
-    ttsRate = _useState386[0],
-    setTtsRate = _useState386[1];
-  var _useState387 = useState(() => store.get('mg_contrast') === 'on'),
+    facility = _useState386[0],
+    setFacility = _useState386[1];
+  var _useState387 = useState(TTS_ON),
     _useState388 = _slicedToArray(_useState387, 2),
-    contrast = _useState388[0],
-    setContrast = _useState388[1];
-  var _useState389 = useState(() => Number(store.get('mg_font') || 1)),
+    ttsOn = _useState388[0],
+    setTtsOn = _useState388[1];
+  var _useState389 = useState(() => Number(store.get('mg_ttsrate') || 0.92)),
     _useState390 = _slicedToArray(_useState389, 2),
-    fontScale = _useState390[0],
-    setFontScale = _useState390[1];
-  var _useState391 = useState(() => store.get('mg_sheeturl') || ''),
+    ttsRate = _useState390[0],
+    setTtsRate = _useState390[1];
+  var _useState391 = useState(() => store.get('mg_contrast') === 'on'),
     _useState392 = _slicedToArray(_useState391, 2),
-    sheetUrl = _useState392[0],
-    setSheetUrl = _useState392[1];
-  var _useState393 = useState('idle'),
+    contrast = _useState392[0],
+    setContrast = _useState392[1];
+  var _useState393 = useState(() => Number(store.get('mg_font') || 1)),
     _useState394 = _slicedToArray(_useState393, 2),
-    syncState = _useState394[0],
-    setSyncState = _useState394[1]; // idle|syncing|ok|err
-  var _useState395 = useState(() => Number(store.get('mg_lastsync') || 0)),
+    fontScale = _useState394[0],
+    setFontScale = _useState394[1];
+  var _useState395 = useState(() => store.get('mg_sheeturl') || ''),
     _useState396 = _slicedToArray(_useState395, 2),
-    lastSync = _useState396[0],
-    setLastSync = _useState396[1];
+    sheetUrl = _useState396[0],
+    setSheetUrl = _useState396[1];
+  var _useState397 = useState('idle'),
+    _useState398 = _slicedToArray(_useState397, 2),
+    syncState = _useState398[0],
+    setSyncState = _useState398[1]; // idle|syncing|ok|err
+  var _useState399 = useState(() => Number(store.get('mg_lastsync') || 0)),
+    _useState400 = _slicedToArray(_useState399, 2),
+    lastSync = _useState400[0],
+    setLastSync = _useState400[1];
   var syncTimer = useRef(null);
   function doSync() {
     if (!sheetUrl) return;
@@ -9958,10 +9985,10 @@ function App() {
     setSession(null);
     setScreen('login');
   }
-  var _useState397 = useState(null),
-    _useState398 = _slicedToArray(_useState397, 2),
-    undoDel = _useState398[0],
-    setUndoDel = _useState398[1];
+  var _useState401 = useState(null),
+    _useState402 = _slicedToArray(_useState401, 2),
+    undoDel = _useState402[0],
+    setUndoDel = _useState402[1];
   function deleteProfile(id) {
     var p = profiles.find(x => x.id === id);
     setProfiles(ps => ps.filter(x => x.id !== id));
@@ -9998,7 +10025,7 @@ function App() {
   function startRecommended() {
     var today = new Date().toISOString().slice(0, 10);
     var doneToday = cur && cur.today === today ? Object.keys(cur.todayDone || {}) : [];
-    var first = recommendNext(doneToday, null);
+    var first = recommendNext(doneToday, null, cur && cur.easy ? EASY_ACTS : null);
     setSession({
       count: 0
     });
@@ -10009,8 +10036,8 @@ function App() {
     var _cur$levels$gameKey;
     stopSpeak();
     var acc = total > 0 ? rawScore / total : 0;
-    var prevLv = (_cur$levels$gameKey = cur.levels[gameKey]) !== null && _cur$levels$gameKey !== void 0 ? _cur$levels$gameKey : 2;
-    var newLv = nextLevel(prevLv, acc);
+    var prevLv = cur.easy ? 1 : (_cur$levels$gameKey = cur.levels[gameKey]) !== null && _cur$levels$gameKey !== void 0 ? _cur$levels$gameKey : 2;
+    var newLv = cur.easy ? 1 : nextLevel(prevLv, acc);
     var today = new Date().toISOString().slice(0, 10);
     var tdNow = cur.today === today ? cur.todayDone || {} : {};
     var firstTodayNow = !tdNow[gameKey];
@@ -10072,7 +10099,7 @@ function App() {
         }));
       } else {
         setResultData(_objectSpread(_objectSpread({}, base), {}, {
-          recNext: recommendNext(doneKeysToday, gameKey)
+          recNext: recommendNext(doneKeysToday, gameKey, cur && cur.easy ? EASY_ACTS : null)
         }));
       }
     } else {
@@ -10086,7 +10113,7 @@ function App() {
         }));
       } else {
         setResultData(_objectSpread(_objectSpread({}, base), {}, {
-          recNext: recommendNext(doneKeysToday, gameKey),
+          recNext: recommendNext(doneKeysToday, gameKey, cur && cur.easy ? EASY_ACTS : null),
           contMin: Math.round(newSec / 60)
         }));
       }
@@ -10105,7 +10132,7 @@ function App() {
     },
     ttsOn: ttsOn,
     onToggleTts: toggleTts,
-    fontUp: () => setFontScale(f => Math.min(1.5, +(f + 0.1).toFixed(1))),
+    fontUp: () => setFontScale(f => Math.min(2.2, +(f + 0.1).toFixed(1))),
     fontDown: () => setFontScale(f => Math.max(0.9, +(f - 0.1).toFixed(1)))
   }), screen === 'login' && /*#__PURE__*/React.createElement(Login, {
     facility: facility,
@@ -10378,7 +10405,7 @@ function App() {
     className: "pill"
   }, domainByKey(gameKey).sub, " · ", (_cur$levels$gameKey2 = cur.levels[gameKey]) !== null && _cur$levels$gameKey2 !== void 0 ? _cur$levels$gameKey2 : 2, "단계")), /*#__PURE__*/React.createElement(GameComp, {
     key: gameKey + '_' + gameNonce,
-    level: (_cur$levels$gameKey3 = cur.levels[gameKey]) !== null && _cur$levels$gameKey3 !== void 0 ? _cur$levels$gameKey3 : 2,
+    level: cur.easy ? 1 : (_cur$levels$gameKey3 = cur.levels[gameKey]) !== null && _cur$levels$gameKey3 !== void 0 ? _cur$levels$gameKey3 : 2,
     onDone: finishGame
   }), /*#__PURE__*/React.createElement("div", {
     className: "center no-print",
