@@ -779,7 +779,7 @@ function downloadBackup(profiles, sessionMin, staff) {
   }
 }
 var BACKUP_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7일
-var APP_VERSION = 'v2026.07.16m';
+var APP_VERSION = 'v2026.07.16n';
 // 구글시트(Apps Script 웹앱)로 전체 데이터 전송. no-cors라 응답은 못 읽지만 전송은 됨
 function buildSheetPayload(profiles, facility, sessionMin) {
   return {
@@ -2404,6 +2404,8 @@ function GameHwatu({
       position: 'absolute',
       top: 0,
       left: 0,
+      right: 0,
+      bottom: 0,
       width: '100%',
       height: '100%',
       objectFit: 'cover'
@@ -2517,6 +2519,8 @@ function MiniCard({
       position: 'absolute',
       top: 0,
       left: 0,
+      right: 0,
+      bottom: 0,
       width: '100%',
       height: '100%',
       objectFit: 'cover'
