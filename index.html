@@ -138,6 +138,8 @@
   .tile.target-hit{background:var(--sky); border-color:var(--green);}
   .tile.target-miss{background:#FBEDEB; border-color:var(--coral);}
   .tile.tap{background:var(--card); border-color:var(--green);}
+  /* 틀린 그림 찾기 전용 — 어르신 눈·손 배려: 그림 크게, 칸 크게 */
+  .tile-spot{min-height:96px; font-size:4.2em; border-width:4px;}
 
   .progress{height:18px; background:#EDE6D6; border-radius:30px; overflow:hidden;}
   .progress > span{display:block; height:100%; background:var(--green); border-radius:30px;}
@@ -5129,7 +5131,7 @@ function GameValue({
  * ===================================================================== */
 var DIFF_PAIRS = [['🔴', '🔵'], ['💙', '💜'], ['💚', '💛'], ['🔶', '🔷'], ['🍎', '🍅'], ['🍊', '🍋'], ['⭐', '🌟'], ['🐶', '🐱'], ['🐰', '🐭'], ['🌸', '🌺'], ['😀', '😄'], ['🌝', '🌚'], ['🌹', '🌷'], ['🐷', '🐮'], ['🍏', '🍐']];
 function makeSpot(level) {
-  var gridN = [4, 6, 9, 9, 12, 12, 16, 16][level - 1] || 9;
+  var gridN = [4, 4, 6, 6, 9, 9, 9, 9][level - 1] || 9;
   var _pick = pick(DIFF_PAIRS),
     _pick2 = _slicedToArray(_pick, 2),
     base = _pick2[0],
@@ -5180,7 +5182,7 @@ function GameSpotDiff({
       if (i + 1 < qs.length) setI(i + 1);else onDone(score + (ok ? 1 : 0), qs.length);
     });
   }
-  var cols = cur.gridN <= 4 ? 2 : cur.gridN <= 9 ? 3 : 4;
+  var cols = cur.gridN <= 4 ? 2 : 3;
   return /*#__PURE__*/React.createElement("div", {
     className: "card center"
   }, /*#__PURE__*/React.createElement("div", {
@@ -5189,12 +5191,12 @@ function GameSpotDiff({
     style: {
       display: 'grid',
       gridTemplateColumns: `repeat(${cols},1fr)`,
-      gap: '8px',
+      gap: '14px',
       marginTop: 12
     }
   }, cur.cells.map((e, idx) => /*#__PURE__*/React.createElement("div", {
     key: idx,
-    className: "tile" + (picked != null ? idx === cur.impIdx ? ' target-hit' : idx === picked ? ' target-miss' : '' : ''),
+    className: "tile tile-spot" + (picked != null ? idx === cur.impIdx ? ' target-hit' : idx === picked ? ' target-miss' : '' : ''),
     onClick: () => tap(idx)
   }, e))));
 }
