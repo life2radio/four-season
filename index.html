@@ -777,7 +777,7 @@ function downloadBackup(profiles, sessionMin, staff) {
   }
 }
 var BACKUP_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7일
-var APP_VERSION = 'v2026.07.09j';
+var APP_VERSION = 'v2026.07.16k';
 // 구글시트(Apps Script 웹앱)로 전체 데이터 전송. no-cors라 응답은 못 읽지만 전송은 됨
 function buildSheetPayload(profiles, facility, sessionMin) {
   return {
@@ -862,7 +862,7 @@ var AVATARS = [{
   items: ['👵', '👴', '🧓', '👩', '👨', '🧑', '👧', '👦', '🙂', '😊', '🥰', '🤗']
 }, {
   label: '꽃',
-  items: ['🌸', '🌷', '🌹', '🌻', '🌼', '💐', '🪷', '🌺', '🏵️', '🌾']
+  items: ['🌸', '🌷', '🌹', '🌻', '🌼', '💐', '💮', '🌺', '🏵️', '🌾']
 }, {
   label: '자연',
   items: ['🌳', '🌲', '🍀', '🍁', '🌿', '🌱', '🌈', '🌞', '🌝', '⭐', '❄️', '🍂']
@@ -871,7 +871,7 @@ var AVATARS = [{
   items: ['🐶', '🐱', '🐰', '🐻', '🐼', '🦊', '🐥', '🦉', '🦋', '🐢', '🐦', '🕊️', '🦌', '🐹', '🐿️', '🐳']
 }, {
   label: '그 외',
-  items: ['🍎', '🍓', '🍊', '🍇', '🍒', '🫐', '🍵', '🍯', '🧸', '🎵']
+  items: ['🍎', '🍓', '🍊', '🍇', '🍒', '🍑', '🍵', '🍯', '🧸', '🎵']
 }];
 function AvatarPicker({
   value,
@@ -1820,7 +1820,7 @@ function calcStreak(history) {
   return s;
 }
 function Confetti() {
-  var pieces = ['🌸', '🌷', '🌼', '✨', '🎉', '🌻', '🪷'];
+  var pieces = ['🌸', '🌷', '🌼', '✨', '🎉', '🌻', '💮'];
   var items = Array.from({
     length: 26
   }, (_, i) => ({
@@ -2480,6 +2480,8 @@ var MINHWA_META = [{
   name: '비'
 }];
 var MINHWA_MONS = MINHWA_META.map(m => m.key);
+var MH_MONS_IN_PLAY = 5; // 한 판에 쓰는 월 수 — 바닥이 불어나지 않게 제한(한 화면 유지)
+var MH_PAR = 44; // 한 판 만점 기준(정답률 계산용)
 function MiniCard({
   k,
   onClick,
@@ -2563,11 +2565,11 @@ function GameMinhwatu({
   level,
   onDone
 }) {
-  var ROUNDS = 2;
+  var ROUNDS = 3;
   function deal() {
     var deck = [];
     var id = 0;
-    MINHWA_MONS.forEach(k => {
+    pickN(MINHWA_MONS, MH_MONS_IN_PLAY).forEach(k => {
       for (var i = 0; i < 4; i++) deck.push({
         id: id++,
         key: k
@@ -2576,8 +2578,8 @@ function GameMinhwatu({
     deck = shuffle(deck);
     return {
       floor: deck.slice(0, 4),
-      hand: deck.slice(4, 10),
-      pile: deck.slice(10)
+      hand: deck.slice(4, 8),
+      pile: deck.slice(8, 12)
     };
   }
   var _useState29 = useState(0),
@@ -2621,8 +2623,8 @@ function GameMinhwatu({
     if (nextSt.hand.length === 0) {
       var s = mhScore(nextCapd);
       tally.current = {
-        hit: tally.current.hit + s.total,
-        total: tally.current.total + 24
+        hit: tally.current.hit + Math.min(s.total, MH_PAR),
+        total: tally.current.total + MH_PAR
       };
       setResult(s);
       speak(`이번 판 ${s.total}점이에요. ${s.g > 0 ? '광 ' + s.g + '장, ' : ''}${s.a > 0 ? '동물 ' + s.a + '장, ' : ''}참 잘하셨어요.`);
@@ -3715,7 +3717,7 @@ function GameStroop({
 /* ===================================================================== *
  *  도전 게임 4. 시장 기억 - 자유회상 (장바구니 목록 외워 고르기)
  * ===================================================================== */
-var SHOP_ITEMS = [['🍎', '사과'], ['🥛', '우유'], ['🍞', '빵'], ['🥚', '달걀'], ['🍌', '바나나'], ['🥕', '당근'], ['🐟', '생선'], ['🧅', '양파'], ['🧄', '마늘'], ['🍅', '토마토'], ['🥬', '배추'], ['🍚', '쌀'], ['🧈', '버터'], ['🍵', '녹차'], ['🫛', '콩'], ['🍠', '고구마']];
+var SHOP_ITEMS = [['🍎', '사과'], ['🥛', '우유'], ['🍞', '빵'], ['🥚', '달걀'], ['🍌', '바나나'], ['🥕', '당근'], ['🐟', '생선'], ['🌽', '옥수수'], ['🌰', '밤'], ['🍅', '토마토'], ['🥬', '배추'], ['🍚', '쌀'], ['🧀', '치즈'], ['🍵', '녹차'], ['🍇', '포도'], ['🍠', '고구마']];
 function GameShop({
   level,
   onDone
@@ -3993,7 +3995,7 @@ function GameTime({
 /* ===================================================================== *
  *  도전 게임 6. 다음 모양 - 패턴 추론
  * ===================================================================== */
-var PAT_SET = ['🔴', '🔵', '🟡', '🟢', '🟣', '🟠', '⭐', '❤️'];
+var PAT_SET = ['🔴', '🔵', '⭐', '❤️', '💛', '💚', '💜', '🔶'];
 function makePattern(level) {
   var period = level <= 2 ? 2 : level <= 4 ? 3 : level <= 6 ? 3 : 4;
   var syms = pickN(PAT_SET, period);
@@ -5125,7 +5127,7 @@ function GameValue({
 /* ===================================================================== *
  *  도전 게임 17. 틀린 그림 찾기 - 세밀한 주의 (다른 하나 찾기)
  * ===================================================================== */
-var DIFF_PAIRS = [['🔵', '🟣'], ['🔴', '🟠'], ['🟢', '🟩'], ['🍎', '🍅'], ['🍊', '🍋'], ['⭐', '🌟'], ['🐶', '🐱'], ['🐰', '🐭'], ['🌸', '🌺'], ['😀', '😄'], ['🌝', '🌚'], ['🟦', '🟪']];
+var DIFF_PAIRS = [['🔴', '🔵'], ['💙', '💜'], ['💚', '💛'], ['🔶', '🔷'], ['🍎', '🍅'], ['🍊', '🍋'], ['⭐', '🌟'], ['🐶', '🐱'], ['🐰', '🐭'], ['🌸', '🌺'], ['😀', '😄'], ['🌝', '🌚'], ['🌹', '🌷'], ['🐷', '🐮'], ['🍏', '🍐']];
 function makeSpot(level) {
   var gridN = [4, 6, 9, 9, 12, 12, 16, 16][level - 1] || 9;
   var _pick = pick(DIFF_PAIRS),
@@ -5753,7 +5755,7 @@ function Reminisce({
       marginTop: 6
     },
     onClick: () => setFav(!fav)
-  }, fav ? '❤️ 좋았던 이야기' : '🤍 좋았던 이야기')), !last && /*#__PURE__*/React.createElement("button", {
+  }, fav ? '❤️ 좋았던 이야기' : '🖤 좋았던 이야기')), !last && /*#__PURE__*/React.createElement("button", {
     className: "big-btn",
     onClick: () => setIdx(idx + 1)
   }, "다음 이야기 →"), last && /*#__PURE__*/React.createElement("button", {
@@ -8981,7 +8983,7 @@ function Settings({
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "rd-emo"
-  }, "🧑‍⚕️"), /*#__PURE__*/React.createElement("div", {
+  }, "👤"), /*#__PURE__*/React.createElement("div", {
     className: "rd-body",
     style: {
       cursor: 'pointer'
