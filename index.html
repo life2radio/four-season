@@ -138,8 +138,8 @@
   .tile.target-hit{background:var(--sky); border-color:var(--green);}
   .tile.target-miss{background:#FBEDEB; border-color:var(--coral);}
   .tile.tap{background:var(--card); border-color:var(--green);}
-  /* 틀린 그림 찾기 전용 — 어르신 눈·손 배려: 그림 크게, 칸 크게 */
-  .tile-spot{min-height:96px; font-size:4.2em; border-width:4px;}
+  /* 큰 그림 격자 전용 — 어르신 눈·손 배려: 화면 폭에 맞춰 최대한 크게 */
+  .tile-spot{min-height:84px; font-size:min(3.6em, 15vw); border-width:4px;}
 
   .progress{height:18px; background:#EDE6D6; border-radius:30px; overflow:hidden;}
   .progress > span{display:block; height:100%; background:var(--green); border-radius:30px;}
@@ -779,7 +779,7 @@ function downloadBackup(profiles, sessionMin, staff) {
   }
 }
 var BACKUP_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7일
-var APP_VERSION = 'v2026.07.16k';
+var APP_VERSION = 'v2026.07.16m';
 // 구글시트(Apps Script 웹앱)로 전체 데이터 전송. no-cors라 응답은 못 읽지만 전송은 됨
 function buildSheetPayload(profiles, facility, sessionMin) {
   return {
@@ -1139,7 +1139,7 @@ function recommendNext(doneKeys = [], justKey = null, allowKeys = null) {
 
 /* ---------- 규칙 기반 적응형 레벨 엔진 ---------- */
 function nextLevel(cur, acc) {
-  if (acc >= 0.8) return Math.min(cur + 1, MAX_LV);
+  if (acc >= 0.75) return Math.min(cur + 1, MAX_LV);
   if (acc < 0.5) return Math.max(cur - 1, 1);
   return cur;
 }
@@ -1158,12 +1158,12 @@ function ageFromYear(y) {
 }
 function startLevelFromCist(score) {
   // 오프라인에서 시행한 CIST 총점(30점)을 시작 레벨로 환산. 진단 아님, 시작점 설정용.
-  if (score == null || score === '') return 3;
+  // 어르신은 쉬운 데서 시작해 성공 경험을 쌓는 게 중요 → 낮게 시작하고 레벨 엔진이 올려줌
+  if (score == null || score === '') return 2;
   var s = Number(score);
-  if (s >= 26) return 5;
-  if (s >= 22) return 4;
-  if (s >= 17) return 3;
-  if (s >= 12) return 2;
+  if (s >= 26) return 4;
+  if (s >= 22) return 3;
+  if (s >= 17) return 2;
   return 1;
 }
 
@@ -2079,7 +2079,7 @@ function GameMemory({
   level,
   onDone
 }) {
-  var pairs = [2, 2, 3, 3, 4, 4, 5, 6][level - 1] || 3; // 단계별 짝 수
+  var pairs = [2, 2, 3, 3, 3, 4, 4, 5][level - 1] || 3; // 단계별 짝 수
   var ROUNDS = 5;
   var newDeck = () => {
     var chosen = pickN(EMOJIS, pairs);
@@ -2260,7 +2260,7 @@ function GameHwatu({
   level,
   onDone
 }) {
-  var pairs = Math.min(HWATU_META.length, [3, 3, 4, 4, 5, 5, 5, 5][level - 1] || 3);
+  var pairs = Math.min(HWATU_META.length, [2, 3, 3, 4, 4, 4, 5, 5][level - 1] || 3);
   var ROUNDS = 3;
   var newDeck = () => {
     var chosen = pickN(HWATU_META, pairs);
@@ -2901,7 +2901,7 @@ function GameAttn({
   level,
   onDone
 }) {
-  var size = [9, 9, 12, 12, 16, 16, 20, 25][level - 1] || 12;
+  var size = [6, 6, 9, 9, 12, 12, 16, 16][level - 1] || 9;
   var targetCount = Math.max(2, Math.round(size * 0.3));
   var ROUNDS = 5;
   var mk = () => {
@@ -2983,11 +2983,11 @@ function GameAttn({
     style: {
       display: 'grid',
       gridTemplateColumns: `repeat(${cols},1fr)`,
-      gap: '8px'
+      gap: '12px'
     }
   }, cur.cells.map(c => /*#__PURE__*/React.createElement("div", {
     key: c.id,
-    className: "tile" + (hits.includes(c.id) ? ' target-hit' : miss.includes(c.id) ? ' target-miss' : ''),
+    className: "tile tile-spot" + (hits.includes(c.id) ? ' target-hit' : miss.includes(c.id) ? ' target-miss' : ''),
     onClick: () => tap(c)
   }, c.emo))), /*#__PURE__*/React.createElement("p", {
     className: "center muted small"
@@ -3065,9 +3065,9 @@ function GameSpace({
   level,
   onDone
 }) {
-  var gridN = level <= 2 ? 9 : level <= 4 ? 16 : 25;
+  var gridN = level <= 4 ? 9 : 16;
   var cols = Math.sqrt(gridN);
-  var litCount = [2, 3, 3, 4, 4, 5, 5, 6][level - 1] || 3;
+  var litCount = [2, 2, 3, 3, 3, 4, 4, 5][level - 1] || 3;
   var ROUNDS = 5;
   var _useState63 = useState(0),
     _useState64 = _slicedToArray(_useState63, 2),
@@ -3132,8 +3132,8 @@ function GameSpace({
     style: {
       display: 'grid',
       gridTemplateColumns: `repeat(${cols},1fr)`,
-      gap: '8px',
-      maxWidth: 360,
+      gap: '12px',
+      maxWidth: cols <= 3 ? 480 : 560,
       margin: '0 auto'
     }
   }, Array.from({
@@ -3147,7 +3147,7 @@ function GameSpace({
       className: "tile" + (showLit || revealHit ? ' lit' : isPicked ? ' tap' : ''),
       onClick: () => tap(idx),
       style: {
-        fontSize: '1.4em'
+        fontSize: '2.4em'
       }
     }, isPicked ? '●' : '');
   })));
@@ -3160,7 +3160,7 @@ function GameExec({
   level,
   onDone
 }) {
-  var n = [3, 3, 4, 5, 5, 6, 7, 8][level - 1] || 4;
+  var n = [3, 3, 4, 4, 5, 5, 6, 6][level - 1] || 4;
   var ROUNDS = 5;
   var _useState73 = useState(0),
     _useState74 = _slicedToArray(_useState73, 2),
@@ -3518,7 +3518,7 @@ function GameReverse({
   level,
   onDone
 }) {
-  var len = [2, 3, 3, 4, 4, 5, 5, 6][level - 1] || 4;
+  var len = [2, 2, 3, 3, 4, 4, 5, 5][level - 1] || 4;
   var TRIALS = 5;
   var _useState91 = useState(0),
     _useState92 = _slicedToArray(_useState91, 2),
@@ -3724,8 +3724,8 @@ function GameShop({
   level,
   onDone
 }) {
-  var n = [2, 3, 3, 4, 4, 5, 5, 6][level - 1] || 3;
-  var decoys = [3, 4, 5, 5, 6, 6, 7, 8][level - 1] || 5;
+  var n = [2, 2, 3, 3, 4, 4, 5, 5][level - 1] || 3;
+  var decoys = [3, 3, 4, 4, 5, 5, 6, 6][level - 1] || 4;
   var ROUNDS = 5;
   var newRound = () => {
     var list = pickN(SHOP_ITEMS, n);
@@ -4167,7 +4167,7 @@ function GameSimon({
   level,
   onDone
 }) {
-  var len = [3, 3, 4, 4, 5, 5, 6, 7][level - 1] || 4;
+  var len = [2, 3, 3, 4, 4, 4, 5, 5][level - 1] || 4;
   var TRIALS = 3;
   var _useState141 = useState(0),
     _useState142 = _slicedToArray(_useState141, 2),
@@ -4666,7 +4666,7 @@ function GameOrder({
   level,
   onDone
 }) {
-  var N = level <= 4 ? 4 : 5;
+  var N = level <= 5 ? 4 : 5;
   var ROUNDS = 5;
   var _useState175 = useState(0),
     _useState176 = _slicedToArray(_useState175, 2),
@@ -4850,7 +4850,7 @@ function GameSymbol({
   level,
   onDone
 }) {
-  var keySize = level <= 2 ? 3 : level <= 4 ? 4 : level <= 6 ? 5 : 6;
+  var keySize = level <= 3 ? 3 : level <= 6 ? 4 : 5;
   var TRIALS = 8;
   var _useState191 = useState(() => pickN(SYMS, keySize)),
     _useState192 = _slicedToArray(_useState191, 1),
@@ -5214,7 +5214,7 @@ function MiniGrid({
     style: {
       display: 'grid',
       gridTemplateColumns: `repeat(${size},${c}px)`,
-      gap: '4px',
+      gap: '6px',
       justifyContent: 'center'
     }
   }, Array.from({
@@ -5230,7 +5230,7 @@ function MiniGrid({
   })));
 }
 function makeShape(level) {
-  var size = level <= 3 ? 3 : 4;
+  var size = 3;
   var total = size * size;
   var fillCount = Math.max(2, Math.round(total * 0.4));
   var target = pickN(Array.from({
@@ -5239,7 +5239,7 @@ function makeShape(level) {
   var key = a => a.join(',');
   var variant = () => {
     var f = target.slice();
-    var ch = rnd(1, 2);
+    var ch = rnd(2, 3);
     var _loop = function _loop() {
       var idx = rnd(0, total - 1);
       f = f.includes(idx) ? f.filter(x => x !== idx) : [...f, idx];
@@ -5316,7 +5316,7 @@ function GameShapeBuild({
   }, /*#__PURE__*/React.createElement(MiniGrid, {
     size: cur.size,
     fill: cur.target,
-    cell: 26
+    cell: 46
   })), /*#__PURE__*/React.createElement("div", {
     className: "grid2",
     style: {
@@ -5334,7 +5334,8 @@ function GameShapeBuild({
     onClick: () => choose(o)
   }, /*#__PURE__*/React.createElement(MiniGrid, {
     size: cur.size,
-    fill: o
+    fill: o,
+    cell: 36
   })))));
 }
 
@@ -5346,7 +5347,7 @@ function GameMissing({
   level,
   onDone
 }) {
-  var N = [3, 4, 4, 5, 5, 6, 6, 7][level - 1] || 4;
+  var N = [3, 3, 4, 4, 4, 5, 5, 5][level - 1] || 4;
   var ROUNDS = 6;
   var mk = () => {
     var items = pickN(NAMED, N);
