@@ -797,7 +797,7 @@ function downloadBackup(profiles, sessionMin, staff) {
   }
 }
 var BACKUP_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7일
-var APP_VERSION = 'v2026.07.16r';
+var APP_VERSION = 'v2026.07.16s';
 // 구글시트(Apps Script 웹앱)로 전체 데이터 전송. no-cors라 응답은 못 읽지만 전송은 됨
 function buildSheetPayload(profiles, facility, sessionMin) {
   return {
@@ -8331,6 +8331,139 @@ function PinGate({
     onClick: onCancel
   }, "← 돌아가기"));
 }
+function LoginLog({
+  orgCode,
+  onBack
+}) {
+  var _ll1 = useState([]),
+    recs = _ll1[0],
+    setRecs = _ll1[1];
+  var _ll2 = useState(true),
+    loading = _ll2[0],
+    setLoading = _ll2[1];
+  useEffect(function () {
+    var local = [];
+    try {
+      local = JSON.parse(store.get('mg_loginlog') || '[]');
+      if (!Array.isArray(local)) local = [];
+    } catch (e) {
+      local = [];
+    }
+    var finished = false;
+    function finish(remoteArr) {
+      if (finished) return;
+      finished = true;
+      var all = local.concat(remoteArr || []);
+      var seen = {},
+        out = [];
+      all.forEach(function (r) {
+        if (!r || !r.t) return;
+        var k = r.t + '_' + (r.name || '') + '_' + (r.role || '');
+        if (seen[k]) return;
+        seen[k] = 1;
+        out.push(r);
+      });
+      out.sort(function (a, b) {
+        return b.t - a.t;
+      });
+      setRecs(out);
+      setLoading(false);
+    }
+    try {
+      if (orgCode && window.__fbdb) {
+        window.__fbdb.ref(orgCode + '/loginlog').once('value').then(function (snap) {
+          var val = {};
+          try {
+            val = snap.val() || {};
+          } catch (e) {
+            val = {};
+          }
+          var remote = Object.keys(val).map(function (k) {
+            return val[k];
+          }).filter(Boolean);
+          finish(remote);
+        }).catch(function () {
+          finish([]);
+        });
+        setTimeout(function () {
+          finish([]);
+        }, 4000);
+      } else {
+        finish([]);
+      }
+    } catch (e) {
+      finish([]);
+    }
+  }, []);
+  function label(r) {
+    if (r.role === 'main') return '메인 관리자';
+    return r.name ? r.name : '일반 관리자';
+  }
+  function fmt(t) {
+    try {
+      return new Date(t).toLocaleString('ko-KR', {
+        month: 'long',
+        day: 'numeric',
+        weekday: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return '';
+    }
+  }
+  return /*#__PURE__*/React.createElement("div", {
+    className: "wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "card"
+  }, /*#__PURE__*/React.createElement("h2", {
+    style: {
+      marginTop: 0
+    }
+  }, "🕘 로그인 기록"), /*#__PURE__*/React.createElement("p", {
+    className: "muted small",
+    style: {
+      marginTop: -4
+    }
+  }, loading ? '불러오는 중이에요…' : `최근 로그인 ${recs.length}건 (최신순)`), !loading && recs.length === 0 && /*#__PURE__*/React.createElement("p", {
+    className: "muted",
+    style: {
+      textAlign: 'center',
+      padding: '18px 0'
+    }
+  }, "아직 기록이 없어요."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      maxHeight: '58vh',
+      overflowY: 'auto',
+      marginTop: 8
+    }
+  }, recs.map(function (r, i) {
+    return /*#__PURE__*/React.createElement("div", {
+      key: i,
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: 10,
+        padding: '10px 4px',
+        borderBottom: '1px dashed var(--line)'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontWeight: 700,
+        color: r.role === 'main' ? 'var(--green-d)' : 'var(--muted)'
+      }
+    }, label(r), r.role === 'main' ? '' : ' · 일반'), /*#__PURE__*/React.createElement("span", {
+      className: "muted small",
+      style: {
+        whiteSpace: 'nowrap'
+      }
+    }, fmt(r.t)));
+  }))), /*#__PURE__*/React.createElement("button", {
+    className: "big-btn ghost",
+    onClick: onBack
+  }, "← 설정으로"));
+}
 function Settings({
   profiles,
   isMain,
@@ -8340,6 +8473,7 @@ function Settings({
   onSessionMin,
   onRestore,
   onChangePin,
+  onLoginLog,
   onSetZodiac,
   facility,
   onSetFacility,
@@ -9049,6 +9183,20 @@ function Settings({
     className: "big-btn ghost",
     onClick: onChangePin
   }, "비밀번호 변경")), /*#__PURE__*/React.createElement("div", {
+    className: "card"
+  }, /*#__PURE__*/React.createElement("h2", {
+    style: {
+      marginTop: 0
+    }
+  }, "🕘 로그인 기록"), /*#__PURE__*/React.createElement("p", {
+    className: "muted small",
+    style: {
+      marginTop: -4
+    }
+  }, "메인·일반 관리자가 언제 로그인했는지 기록이에요. (기관 연결 시 다른 태블릿 로그인도 함께 보여요)"), /*#__PURE__*/React.createElement("button", {
+    className: "big-btn ghost",
+    onClick: onLoginLog
+  }, "로그인 기록 보기")), /*#__PURE__*/React.createElement("div", {
     className: "card"
   }, /*#__PURE__*/React.createElement("h2", {
     style: {
@@ -10242,6 +10390,8 @@ function App() {
           return 'home';
         case 'pinChange':
           return 'settings';
+        case 'loginlog':
+          return 'settings';
         case 'course':
           return md === 'elder' ? 'login' : 'home';
         case 'elderLogin':
@@ -10350,6 +10500,25 @@ function App() {
     setCurId(null);
     setSession(null);
     setScreen('login');
+  }
+  function recordLogin(role, name) {
+    var rec = {
+      t: Date.now(),
+      role: role || 'main',
+      name: name || ''
+    };
+    try {
+      var arr = JSON.parse(store.get('mg_loginlog') || '[]');
+      if (!Array.isArray(arr)) arr = [];
+      arr.push(rec);
+      if (arr.length > 300) arr = arr.slice(arr.length - 300);
+      store.set('mg_loginlog', JSON.stringify(arr));
+    } catch (e) {}
+    try {
+      if (orgCode && window.__fbdb) {
+        window.__fbdb.ref(orgCode + '/loginlog').push(rec);
+      }
+    } catch (e) {}
   }
   var _useState407 = useState(null),
     _useState408 = _slicedToArray(_useState407, 2),
@@ -10563,6 +10732,9 @@ function App() {
         setAdminRole(role);
         setFirstSetup(false);
         setAdminName(role === 'staff' && res ? res.name : '');
+        try {
+          recordLogin(role, role === 'staff' && res ? res.name : '');
+        } catch (e) {}
         setScreen('home');
         try {
           var last = Number(store.get('mg_lastbackup') || 0);
@@ -10645,6 +10817,9 @@ function App() {
     onSetPin: p => setMainPin(hashPin(p)),
     onSuccess: () => setScreen('settings'),
     onCancel: () => setScreen('settings')
+  }), screen === 'loginlog' && isMain && /*#__PURE__*/React.createElement(LoginLog, {
+    orgCode: orgCode,
+    onBack: () => setScreen('settings')
   }), screen === 'new' && /*#__PURE__*/React.createElement(NewProfile, {
     onSave: saveNew,
     onCancel: () => setScreen('home')
@@ -10718,6 +10893,7 @@ function App() {
       setCurId(null);
     },
     onChangePin: () => setScreen('pinChange'),
+    onLoginLog: () => setScreen('loginlog'),
     onSetZodiac: (id, z) => setProfiles(ps => ps.map(p => p.id === id ? _objectSpread(_objectSpread({}, p), {}, {
       zodiac: z
     }) : p)),
