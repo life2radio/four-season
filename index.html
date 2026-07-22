@@ -227,6 +227,24 @@
   .hero-sub{margin-top:9px; font-size:1em; color:var(--muted);}
   .hero-rule{width:30px; height:2px; background:var(--line); border-radius:2px; margin:14px auto 0;}
 
+  /* 로그인(첫) 화면 — 태블릿에서 스크롤 없이 한 화면에 들어오도록 */
+  .login-wrap{ min-height:calc(100vh - 56px); display:flex; flex-direction:column; justify-content:center;
+    padding-top:6px !important; padding-bottom:8px !important; }
+  .login-wrap .hero{ margin:0 auto 4px; width:100%; }
+  .login-wrap .hero-img{ max-height:36vh; object-fit:cover; object-position:center 30%; }
+  .login-wrap .hero-plate{ padding-bottom:18px; }
+  .login-wrap .hero-mark{ width:52px; height:52px; margin:-26px auto 8px; }
+  .login-wrap .hero-title{ margin-top:4px; }
+  .login-wrap .hero-sub{ margin-top:6px; }
+  .login-wrap .hero-rule{ margin-top:10px; }
+  .login-wrap .spacer{ height:6px; }
+  .login-wrap .disclaimer{ padding:8px 12px 0; }
+  @media (min-width:820px){
+    .login-wrap{ padding-left:30px !important; padding-right:30px !important; }
+    .login-wrap .hero{ max-width:600px; }
+    .login-wrap .hero-img{ max-height:40vh; }
+  }
+
   /* 꽃가루 효과 */
   .confetti{position:fixed; top:0; left:0; right:0; bottom:0; pointer-events:none; overflow:hidden; z-index:60;}
   .confetti i{position:absolute; top:-40px; font-size:1.7em; animation:fall linear forwards;}
@@ -779,7 +797,7 @@ function downloadBackup(profiles, sessionMin, staff) {
   }
 }
 var BACKUP_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7일
-var APP_VERSION = 'v2026.07.16p';
+var APP_VERSION = 'v2026.07.16r';
 // 구글시트(Apps Script 웹앱)로 전체 데이터 전송. no-cors라 응답은 못 읽지만 전송은 됨
 function buildSheetPayload(profiles, facility, sessionMin) {
   return {
@@ -9528,7 +9546,7 @@ function Login({
     speak('포시즌 기억정원을 누르면 시작해요. 관리자는 아래 버튼을 누르세요.');
   }, []);
   return /*#__PURE__*/React.createElement("div", {
-    className: "wrap"
+    className: "wrap login-wrap"
   }, /*#__PURE__*/React.createElement("div", {
     className: "hero",
     onClick: onElderStart,
@@ -10186,6 +10204,76 @@ function App() {
   }, [staff]);
   var cur = profiles.find(p => p.id === curId);
   var isMain = mode === 'admin' && adminRole === 'main';
+  // ── 뒤로가기(안드로이드/브라우저) 처리: 앱 밖으로 나가지 않고 이전 화면으로 ──
+  var backRef = useRef({});
+  backRef.current = {
+    screen: screen,
+    mode: mode,
+    reportFrom: reportFrom,
+    isMain: isMain
+  };
+  useEffect(function () {
+    // 화면이 바뀔 때마다 히스토리 항목을 하나 쌓아 다음 뒤로가기를 흡수
+    try {
+      window.history.pushState({
+        mgScreen: screen
+      }, '');
+    } catch (e) {}
+  }, [screen]);
+  useEffect(function () {
+    function backTarget(s, md, rf, im) {
+      switch (s) {
+        case 'game':
+        case 'result':
+        case 'intro':
+        case 'editProfile':
+        case 'reminisce':
+          return 'course';
+        case 'record':
+        case 'report':
+          return rf === 'overview' ? 'overview' : 'course';
+        case 'cert':
+          return im ? 'report' : 'record';
+        case 'preview':
+          return 'report';
+        case 'overview':
+        case 'new':
+        case 'settings':
+          return 'home';
+        case 'pinChange':
+          return 'settings';
+        case 'course':
+          return md === 'elder' ? 'login' : 'home';
+        case 'elderLogin':
+        case 'adminLogin':
+          return 'login';
+        default:
+          return s;
+        // login, home: 루트 → 그대로(다음 뒤로가기에서 앱 종료 허용)
+      }
+    }
+    function onPop() {
+      var st = backRef.current || {};
+      var s = st.screen;
+      var back = backTarget(s, st.mode, st.reportFrom, st.isMain);
+      if (back === s) return; // 루트 화면: 트랩하지 않음
+      try {
+        stopSpeak();
+      } catch (e) {}
+      if (back === 'login' || back === 'home') {
+        setSession(null);
+        setCurId(null);
+      } else if (back === 'course') {
+        setSession(null);
+      }
+      setScreen(back);
+      // setScreen이 위 [screen] effect를 다시 돌려 새 항목을 쌓으므로 여기서 push 불필요
+    }
+    window.addEventListener('popstate', onPop);
+    return function () {
+      window.removeEventListener('popstate', onPop);
+    };
+  }, []);
   function ensureParticipant(nm) {
     var name = (nm || '').trim();
     if (!name) return;
