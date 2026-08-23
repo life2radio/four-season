@@ -140,6 +140,8 @@
   .tile.tap{background:var(--card); border-color:var(--green);}
   /* 큰 그림 격자 전용 — 어르신 눈·손 배려: 화면 폭에 맞춰 최대한 크게 */
   .tile-spot{min-height:84px; font-size:min(3.6em, 15vw); border-width:4px;}
+  /* 반응형 엔진이 크기를 직접 지정하는 칸 — 기본 제약 해제 */
+  .tile.fit{min-height:0; aspect-ratio:auto; line-height:1;}
   /* 틀린 그림 찾기 전용 — 칸은 폭 제한으로 줄이고, 안의 그림은 크게 */
   .spot-cell{min-height:0; font-size:min(5em, 17vw); border-width:3px;}
 
@@ -799,7 +801,7 @@ function downloadBackup(profiles, sessionMin, staff) {
   }
 }
 var BACKUP_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7일
-var APP_VERSION = 'v2026.07.16t';
+var APP_VERSION = 'v2026.07.16u';
 // 구글시트(Apps Script 웹앱)로 전체 데이터 전송. no-cors라 응답은 못 읽지만 전송은 됨
 function buildSheetPayload(profiles, facility, sessionMin) {
   return {
@@ -1203,6 +1205,97 @@ function shuffle(a) {
 }
 function pickN(a, n) {
   return shuffle(a).slice(0, n);
+}
+
+/* ===================================================================== *
+ *  공통 반응형 엔진 — 어떤 기기에서도 격자가 한 화면에 들어오도록
+ *  (컴퓨터·태블릿·휴대폰 / 가로·세로 모두 실시간 계산)
+ * ===================================================================== */
+function useVP() {
+  var _vp = useState(function () {
+      return {
+        w: typeof window !== 'undefined' && window.innerWidth ? window.innerWidth : 360,
+        h: typeof window !== 'undefined' && window.innerHeight ? window.innerHeight : 640
+      };
+    }),
+    vp = _vp[0],
+    setVp = _vp[1];
+  useEffect(function () {
+    var raf = null;
+    function on() {
+      if (raf) return;
+      raf = setTimeout(function () {
+        raf = null;
+        try {
+          setVp({
+            w: window.innerWidth,
+            h: window.innerHeight
+          });
+        } catch (e) {}
+      }, 120);
+    }
+    try {
+      window.addEventListener('resize', on);
+      window.addEventListener('orientationchange', on);
+    } catch (e) {}
+    return function () {
+      try {
+        window.removeEventListener('resize', on);
+        window.removeEventListener('orientationchange', on);
+      } catch (e) {}
+      if (raf) clearTimeout(raf);
+    };
+  }, []);
+  return vp;
+}
+/* n개 칸을 cols열로 놓을 때, 남은 세로 공간 안에 반드시 들어가는 칸 크기를 구함.
+   reserve = 격자 위아래에 쓰이는 세로 공간(제목·안내문·버튼 등) 추정치 */
+function fitGrid(vp, n, cols, opt) {
+  opt = opt || {};
+  var gap = opt.gap == null ? 12 : opt.gap;
+  var reserve = opt.reserve == null ? 300 : opt.reserve;
+  var padX = opt.padX == null ? 44 : opt.padX;
+  var rows = Math.ceil(n / Math.max(1, cols));
+  var W = vp && vp.w ? vp.w : 360;
+  var H = vp && vp.h ? vp.h : 640;
+  // 화면이 작을수록 여유공간도 비례해서 줄임(작은 폰에서 칸이 과하게 작아지지 않게)
+  // 세로가 짧은 화면(가로로 눕힌 폰 등)은 여유를 더 줄여 격자가 밀려나지 않게 함
+  var ratioH = H < 520 ? 0.38 : 0.46;
+  var rsv = Math.min(reserve, Math.round(H * ratioH));
+  var availW = Math.max(180, W - padX);
+  var availH = Math.max(140, H - rsv);
+  var byW = (availW - gap * (cols - 1)) / cols;
+  var byH = (availH - gap * (rows - 1)) / rows;
+  var cell = Math.floor(Math.min(byW, byH));
+  var min = opt.min == null ? 42 : opt.min;
+  // 세로가 아주 짧은 화면에서는 최소 크기를 조금 양보해야 격자가 밀려나지 않음
+  if (H < 420 && min > 38) min = 38;
+  var max = opt.max == null ? 150 : opt.max;
+  if (cell > max) cell = max;
+  if (cell < min) cell = min;
+  var ratio = opt.fontRatio == null ? 0.6 : opt.fontRatio;
+  return {
+    cell: cell,
+    gap: gap,
+    rows: rows,
+    font: Math.max(12, Math.round(cell * ratio)),
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(' + cols + ',' + cell + 'px)',
+      gap: gap + 'px',
+      justifyContent: 'center',
+      margin: '0 auto'
+    },
+    cellStyle: function (extra) {
+      var s = {
+        width: cell,
+        height: cell,
+        fontSize: Math.max(12, Math.round(cell * ratio)) + 'px'
+      };
+      if (extra) for (var k in extra) s[k] = extra[k];
+      return s;
+    }
+  };
 }
 
 /* ===================================================================== *
@@ -2192,6 +2285,13 @@ function GameMemory({
     }
   }, [cards]);
   var cols = pairs <= 3 ? 2 : pairs <= 4 ? 3 : 4;
+  var vp = useVP();
+  var G = fitGrid(vp, pairs * 2, cols, {
+    reserve: 310,
+    gap: 10,
+    max: 130,
+    fontRatio: 0.6
+  });
   return /*#__PURE__*/React.createElement("div", {
     className: "card"
   }, /*#__PURE__*/React.createElement("p", {
@@ -2201,15 +2301,12 @@ function GameMemory({
   }, "같은 그림 짝 찾기"), /*#__PURE__*/React.createElement("p", {
     className: "center muted small"
   }, "짝 ", pairs, "개 · 시도 ", tries, "번"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: `repeat(${cols},1fr)`,
-      gap: '10px'
-    }
+    style: G.style
   }, cards.map(c => /*#__PURE__*/React.createElement("div", {
     key: c.id,
-    className: "tile" + (c.matched ? ' matched' : c.flipped ? ' flip' : ''),
-    onClick: () => flip(c)
+    className: "tile fit" + (c.matched ? ' matched' : c.flipped ? ' flip' : ''),
+    onClick: () => flip(c),
+    style: G.cellStyle()
   }, c.flipped || c.matched ? c.emo : '❓'))));
 }
 
@@ -2385,6 +2482,16 @@ function GameHwatu({
     }
   }, [cards]);
   var cols = pairs <= 3 ? 3 : 4;
+  var vp = useVP();
+  var G = fitGrid(vp, pairs * 2, cols, {
+    reserve: 300,
+    gap: 8,
+    max: 120,
+    padX: 44
+  });
+  // 화투패는 세로가 긴 3:4 비율 → 높이 기준으로 폭을 다시 제한
+  var cardW = Math.min(G.cell, Math.floor((vp.h - Math.min(300, vp.h * 0.46) - 8 * (G.rows - 1)) / G.rows * 0.75));
+  if (cardW < 40) cardW = 40;
   return /*#__PURE__*/React.createElement("div", {
     className: "card"
   }, /*#__PURE__*/React.createElement("p", {
@@ -2396,9 +2503,11 @@ function GameHwatu({
   }, "같은 그림 ", pairs, "쌍 · 시도 ", tries, "번"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'grid',
-      gridTemplateColumns: `repeat(${cols},1fr)`,
+      gridTemplateColumns: 'repeat(' + cols + ',' + cardW + 'px)',
       gap: '8px',
-      marginTop: 8
+      marginTop: 8,
+      justifyContent: 'center',
+      margin: '8px auto 0'
     }
   }, cards.map(c => /*#__PURE__*/React.createElement("div", {
     key: c.id,
@@ -2661,6 +2770,19 @@ function GameMinhwatu({
   onDone
 }) {
   var ROUNDS = 3;
+  var vp = useVP();
+  // 바닥(5열)·내 패(6열)가 모두 한 화면에 들어오도록 카드 폭 계산
+  var MW = (function () {
+    var W = vp && vp.w ? vp.w : 360;
+    var H = vp && vp.h ? vp.h : 640;
+    var byW = Math.floor((Math.max(200, W - 48) - 6 * 5) / 6);
+    // 바닥 2줄 + 내 패 1줄 = 카드 3줄분 세로 (카드 비율 3:4)
+    var byH = Math.floor((Math.max(160, H - Math.min(330, H * 0.5)) / 3) * 0.75);
+    var c = Math.min(byW, byH);
+    if (c > 84) c = 84;
+    if (c < 34) c = 34;
+    return c;
+  })();
   function deal() {
     var deck = [];
     var id = 0;
@@ -2919,9 +3041,10 @@ function GameMinhwatu({
   }, "바닥"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(5,1fr)',
+      gridTemplateColumns: 'repeat(5,' + MW + 'px)',
+      justifyContent: 'center',
       gap: 6,
-      minHeight: 70
+      minHeight: Math.round(MW * 1.33)
     }
   }, st.floor.map(c => /*#__PURE__*/React.createElement(MiniCard, {
     key: c.id,
@@ -2940,7 +3063,8 @@ function GameMinhwatu({
   }, "내 패 (누르면 내요)"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(6,1fr)',
+      gridTemplateColumns: 'repeat(6,' + MW + 'px)',
+      justifyContent: 'center',
       gap: 6
     }
   }, st.hand.map(c => /*#__PURE__*/React.createElement(MiniCard, {
@@ -3054,6 +3178,13 @@ function GameAttn({
     } else setMiss([...miss, c.id]);
   }
   var cols = size <= 9 ? 3 : size <= 16 ? 4 : 5;
+  var vp = useVP();
+  var G = fitGrid(vp, size, cols, {
+    reserve: 300,
+    gap: 12,
+    max: 130,
+    fontRatio: 0.6
+  });
   return /*#__PURE__*/React.createElement("div", {
     className: "card"
   }, /*#__PURE__*/React.createElement("div", {
@@ -3073,15 +3204,12 @@ function GameAttn({
       verticalAlign: 'middle'
     }
   }, cur.target)), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: `repeat(${cols},1fr)`,
-      gap: '12px'
-    }
+    style: G.style
   }, cur.cells.map(c => /*#__PURE__*/React.createElement("div", {
     key: c.id,
-    className: "tile tile-spot" + (hits.includes(c.id) ? ' target-hit' : miss.includes(c.id) ? ' target-miss' : ''),
-    onClick: () => tap(c)
+    className: "tile fit" + (hits.includes(c.id) ? ' target-hit' : miss.includes(c.id) ? ' target-miss' : ''),
+    onClick: () => tap(c),
+    style: G.cellStyle()
   }, c.emo))), /*#__PURE__*/React.createElement("p", {
     className: "center muted small"
   }, "찾음 ", hits.length, " / ", targetCount));
@@ -3161,6 +3289,13 @@ function GameSpace({
   var gridN = level <= 4 ? 9 : 16;
   var cols = Math.sqrt(gridN);
   var litCount = [2, 2, 3, 3, 3, 4, 4, 5][level - 1] || 3;
+  var vp = useVP();
+  var G = fitGrid(vp, gridN, cols, {
+    reserve: 300,
+    gap: 12,
+    max: 140,
+    fontRatio: 0.55
+  });
   var ROUNDS = 5;
   var _useState63 = useState(0),
     _useState64 = _slicedToArray(_useState63, 2),
@@ -3222,13 +3357,7 @@ function GameSpace({
   }, phase === 'show' ? '자리를 기억하세요' : '기억한 자리를 누르세요'), /*#__PURE__*/React.createElement("p", {
     className: "center muted small"
   }, phase === 'show' ? '불이 켜진 칸을 외워주세요' : `켜졌던 칸 ${litCount}곳`), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: `repeat(${cols},1fr)`,
-      gap: '12px',
-      maxWidth: cols <= 3 ? 480 : 560,
-      margin: '0 auto'
-    }
+    style: G.style
   }, Array.from({
     length: gridN
   }, (_, idx) => {
@@ -3237,11 +3366,9 @@ function GameSpace({
     var revealHit = phase === 'done' && lit.includes(idx);
     return /*#__PURE__*/React.createElement("div", {
       key: idx,
-      className: "tile" + (showLit || revealHit ? ' lit' : isPicked ? ' tap' : ''),
+      className: "tile fit" + (showLit || revealHit ? ' lit' : isPicked ? ' tap' : ''),
       onClick: () => tap(idx),
-      style: {
-        fontSize: '2.4em'
-      }
+      style: G.cellStyle()
     }, isPicked ? '●' : '');
   })));
 }
@@ -3317,6 +3444,13 @@ function GameExec({
     }
   }
   var cols = n <= 4 ? 2 : n <= 6 ? 3 : 4;
+  var vp = useVP();
+  var G = fitGrid(vp, n, cols, {
+    reserve: 320,
+    gap: 12,
+    max: 140,
+    fontRatio: 0.5
+  });
   return /*#__PURE__*/React.createElement("div", {
     className: "card"
   }, /*#__PURE__*/React.createElement("p", {
@@ -3331,20 +3465,16 @@ function GameExec({
       fontSize: '1.3em'
     }
   }, next <= n ? next : '완료')), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: `repeat(${cols},1fr)`,
-      gap: '12px'
-    }
+    style: G.style
   }, tiles.map(v => /*#__PURE__*/React.createElement("button", {
     key: v,
-    className: "tile",
-    style: {
+    className: "tile fit",
+    style: G.cellStyle({
       fontWeight: 800,
       background: hit.includes(v) ? 'var(--sky)' : '#fff',
       borderColor: hit.includes(v) ? 'var(--green)' : 'var(--line)',
       cursor: 'pointer'
-    },
+    }),
     onClick: () => tap(v)
   }, v))));
 }
@@ -3613,6 +3743,14 @@ function GameReverse({
 }) {
   var len = [2, 2, 3, 3, 4, 4, 5, 5][level - 1] || 4;
   var TRIALS = 5;
+  var vp = useVP();
+  var RG = fitGrid(vp, 10, 5, {
+    reserve: 340,
+    gap: 8,
+    max: 96,
+    min: 40,
+    fontRatio: 0.52
+  });
   var _useState91 = useState(0),
     _useState92 = _slicedToArray(_useState91, 2),
     trial = _useState92[0],
@@ -3713,19 +3851,15 @@ function GameReverse({
       letterSpacing: '.1em'
     }
   }, entered.join(' ') || '　'), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(5,1fr)',
-      gap: '8px'
-    }
+    style: RG.style
   }, [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map(d => /*#__PURE__*/React.createElement("button", {
     key: d,
-    className: "tile",
-    style: {
+    className: "tile fit",
+    style: RG.cellStyle({
       fontWeight: 800,
       background: '#fff',
       cursor: 'pointer'
-    },
+    }),
     onClick: () => tap(d)
   }, d)))));
 }
@@ -4341,6 +4475,12 @@ function GameSimon({
       }
     }
   }
+  var vp = useVP();
+  var SG = fitGrid(vp, 4, 2, {
+    reserve: 300,
+    gap: 14,
+    max: 150
+  });
   return /*#__PURE__*/React.createElement("div", {
     className: "card center"
   }, /*#__PURE__*/React.createElement("p", {
@@ -4350,19 +4490,15 @@ function GameSimon({
       fontSize: '2.4em'
     }
   }, "👍"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: '14px',
-      maxWidth: 320,
+    style: Object.assign({}, SG.style, {
       margin: '18px auto'
-    }
+    })
   }, SIMON.map((c, idx) => /*#__PURE__*/React.createElement("div", {
     key: idx,
     onClick: () => tap(idx),
     style: {
-      aspectRatio: '1/1',
-      height: 130,
+      width: SG.cell,
+      height: SG.cell,
       borderRadius: 18,
       cursor: 'pointer',
       background: active === idx ? c[1] : c[0],
@@ -5276,24 +5412,26 @@ function GameSpotDiff({
     });
   }
   var cols = cur.gridN <= 4 ? 2 : 3;
+  var vp = useVP();
+  var G = fitGrid(vp, cur.gridN, cols, {
+    reserve: 250,
+    gap: 12,
+    max: 150,
+    fontRatio: 0.66
+  });
   return /*#__PURE__*/React.createElement("div", {
     className: "card center"
   }, /*#__PURE__*/React.createElement("div", {
     className: "center small muted"
   }, i + 1, " / ", qs.length), /*#__PURE__*/React.createElement("h2", null, "다른 그림을 찾으세요"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: `repeat(${cols},1fr)`,
-      gap: '12px',
-      marginTop: 10,
-      maxWidth: cols === 2 ? 300 : 460,
-      marginLeft: 'auto',
-      marginRight: 'auto'
-    }
+    style: Object.assign({
+      marginTop: 10
+    }, G.style)
   }, cur.cells.map((e, idx) => /*#__PURE__*/React.createElement("div", {
     key: idx,
-    className: "tile spot-cell" + (picked != null ? idx === cur.impIdx ? ' target-hit' : idx === picked ? ' target-miss' : '' : ''),
-    onClick: () => tap(idx)
+    className: "tile fit" + (picked != null ? idx === cur.impIdx ? ' target-hit' : idx === picked ? ' target-miss' : '' : ''),
+    onClick: () => tap(idx),
+    style: G.cellStyle()
   }, e))));
 }
 
@@ -5366,6 +5504,22 @@ function GameShapeBuild({
 }) {
   var nQ = 10;
   var key = a => a.join(',');
+  var vp = useVP();
+  // 문제 도형(위) + 보기 3~4개(아래)가 한 화면에 들어오도록 셀 크기 계산
+  var SH = (function () {
+    var W = vp && vp.w ? vp.w : 360;
+    var H = vp && vp.h ? vp.h : 640;
+    var qCell = Math.floor(Math.min((W - 80) / 3, (H * 0.26 - 12) / 3));
+    var oCell = Math.floor(Math.min((W - 90) / 4 / 3, (H * 0.22 - 12) / 3));
+    if (qCell > 56) qCell = 56;
+    if (qCell < 20) qCell = 20;
+    if (oCell > 40) oCell = 40;
+    if (oCell < 12) oCell = 12;
+    return {
+      q: qCell,
+      o: oCell
+    };
+  })();
   var _useState225 = useState(() => Array.from({
       length: nQ
     }, () => makeShape(level))),
@@ -5412,7 +5566,7 @@ function GameShapeBuild({
   }, /*#__PURE__*/React.createElement(MiniGrid, {
     size: cur.size,
     fill: cur.target,
-    cell: 46
+    cell: SH.q
   })), /*#__PURE__*/React.createElement("div", {
     className: "grid2",
     style: {
@@ -5431,7 +5585,7 @@ function GameShapeBuild({
   }, /*#__PURE__*/React.createElement(MiniGrid, {
     size: cur.size,
     fill: o,
-    cell: 36
+    cell: SH.o
   })))));
 }
 
