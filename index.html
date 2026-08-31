@@ -826,7 +826,7 @@ function downloadBackup(profiles, sessionMin, staff) {
   }
 }
 var BACKUP_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7일
-var APP_VERSION = 'v2026.08.27c';
+var APP_VERSION = 'v2026.08.27d';
 // 구글시트(Apps Script 웹앱)로 전체 데이터 전송. no-cors라 응답은 못 읽지만 전송은 됨
 function buildSheetPayload(profiles, facility, sessionMin) {
   return {
@@ -6266,7 +6266,7 @@ function compressImage(file, cb) {
       var img = new Image();
       img.onload = function () {
         try {
-          var MAX = 800;
+          var MAX = 1000;
           var w = img.width,
             h = img.height;
           if (w > h && w > MAX) {
@@ -6996,6 +6996,18 @@ function Reminisce({
     guide = _gd[0],
     setGuide = _gd[1];
   useRemImg();
+  var vp = useVP();
+  // 사진 + 질문 + 버튼이 한 화면에 들어오도록 사진 높이를 계산
+  var picH = (function () {
+    var H = vp && vp.h ? vp.h : 640;
+    var W = vp && vp.w ? vp.w : 360;
+    var reserve = H < 560 ? 250 : 330; // 제목·질문·단계버튼·안내·다음버튼이 쓰는 세로
+    var h = H - reserve;
+    if (h > W * 0.95) h = Math.round(W * 0.95); // 가로보다 너무 길어지지 않게
+    if (h > 560) h = 560;
+    if (h < 120) h = 120;
+    return h;
+  })();
   useEffect(() => {
     if (!theme) return;
     var items = theme.items || [];
@@ -7091,8 +7103,9 @@ function Reminisce({
     },
     style: {
       width: '100%',
-      maxHeight: '38vh',
-      objectFit: 'cover',
+      height: picH,
+      objectFit: 'contain',
+      background: '#EFE7D5',
       borderRadius: 14,
       display: 'block'
     }
@@ -7106,15 +7119,16 @@ function Reminisce({
     },
     style: {
       width: '100%',
-      maxHeight: '38vh',
-      objectFit: 'cover',
+      height: picH,
+      objectFit: 'contain',
+      background: '#EFE7D5',
       borderRadius: 14,
       display: 'block'
     }
   }), !pic && /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'none',
-      height: 150,
+      height: picH,
       alignItems: 'center',
       justifyContent: 'center',
       fontSize: '4em',
@@ -9936,7 +9950,7 @@ function RemImgManager({
       style: {
         width: '100%',
         height: '100%',
-        objectFit: 'cover'
+        objectFit: 'contain'
       }
     }) : /*#__PURE__*/React.createElement("img", {
       src: REM_IMG_BASE + it.img + '.jpg',
@@ -9947,7 +9961,7 @@ function RemImgManager({
       style: {
         width: '100%',
         height: '100%',
-        objectFit: 'cover'
+        objectFit: 'contain'
       }
     }), !pic && /*#__PURE__*/React.createElement("span", {
       style: {
