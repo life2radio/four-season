@@ -144,24 +144,14 @@
   .tile.fit{min-height:0; aspect-ratio:auto; line-height:1;}
 
   /* 추억 이야기 — 자주 쓰는 활동이라 눈에 잘 띄게 */
-  .rem-btn{display:flex; align-items:center; gap:14px; width:100%; margin-top:12px;
-    padding:16px 18px; border-radius:18px; cursor:pointer; text-align:left;
-    font-family:inherit; color:#4A3A22;
-    background:linear-gradient(135deg,#FBF3DC 0%, #F6E7C8 100%);
-    border:2px solid var(--amber);
-    box-shadow:0 3px 10px -5px rgba(160,110,30,.5);
-    transition:transform .12s, box-shadow .12s;}
-  .rem-btn:active{transform:scale(.985); box-shadow:0 1px 5px -3px rgba(160,110,30,.5);}
-  .rem-emo{font-size:2.3em; line-height:1; flex:0 0 auto;}
-  .rem-txt{flex:1; display:flex; flex-direction:column; gap:3px; min-width:0;}
-  .rem-txt b{font-size:1.32em; font-weight:800; letter-spacing:-.01em;}
-  .rem-txt small{font-size:.9em; color:#7A6A4C; line-height:1.35;}
-  .rem-go{font-size:1.9em; color:var(--amber); flex:0 0 auto; opacity:.85;}
-  @media (min-width:700px){
-    .rem-btn{padding:20px 24px; gap:18px;}
-    .rem-emo{font-size:2.7em;}
-    .rem-txt b{font-size:1.45em;}
-  }
+  .rem-btn{display:block; width:100%; margin-top:12px; cursor:pointer; text-align:center;
+    font-family:inherit; color:#5A4526; font-size:1.35em; font-weight:700;
+    padding:22px 18px; border-radius:16px; letter-spacing:-.3px;
+    background:linear-gradient(135deg,#FBF3DC 0%, #F3E2BE 100%);
+    border:none; box-shadow:0 2px 0 rgba(160,120,40,.35), 0 10px 26px rgba(160,120,40,.14);
+    transition:transform .06s, box-shadow .06s;}
+  .rem-btn:active{transform:translateY(2px); box-shadow:0 0 0, 0 4px 12px rgba(160,120,40,.14);}
+  .rem-btn .rem-sub{display:block; font-size:.58em; font-weight:500; opacity:.85; margin-top:7px; letter-spacing:0;}
 
   /* 근거자료 표 */
   .rep-table{width:100%; border-collapse:collapse; font-size:.92em;}
@@ -203,11 +193,11 @@
   @keyframes mhtake{ 0%{ box-shadow:0 0 0 3px var(--amber);} 50%{ box-shadow:0 0 0 6px rgba(201,130,31,.55);} 100%{ box-shadow:0 0 0 3px var(--amber);} }
   .mh-take{ animation:mhtake .5s ease-in-out 2; }
   .tree-stage > img{position:absolute; top:0; left:0; right:0; bottom:0; width:100%; height:100%; object-fit:contain;}
-  .blossom{position:absolute; width:72px; height:72px;
+  .blossom{position:absolute; width:min(52px, 8.6vh); height:min(52px, 8.6vh);
     transform:translate(-50%,-50%) scale(0); transform-origin:center;
     animation:bloom .6s cubic-bezier(.34,1.56,.64,1) forwards;
     filter:drop-shadow(0 2px 3px rgba(0,0,0,.22));}
-  @media (min-width:820px){ .blossom{ width:92px; height:92px; } }
+  @media (min-width:820px){ .blossom{ width:min(62px, 8.6vh); height:min(62px, 8.6vh); } }
   @keyframes bloom{ 0%{transform:translate(-50%,-50%) scale(0); opacity:0;}
     60%{transform:translate(-50%,-50%) scale(1.15); opacity:1;}
     100%{transform:translate(-50%,-50%) scale(1); opacity:1;} }
@@ -847,7 +837,7 @@ function downloadBackup(profiles, sessionMin, staff) {
   }
 }
 var BACKUP_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7일
-var APP_VERSION = 'v2026.08.27i';
+var APP_VERSION = 'v2026.08.27j';
 // 구글시트(Apps Script 웹앱)로 전체 데이터 전송. no-cors라 응답은 못 읽지만 전송은 됨
 function buildSheetPayload(profiles, facility, sessionMin) {
   return {
@@ -8241,13 +8231,9 @@ function Course({
   }, "버튼만 누르면 알맞은 활동을 이어서 추천해 드려요")), /*#__PURE__*/React.createElement("button", {
     className: "rem-btn",
     onClick: onReminisce
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "rem-emo"
-  }, "\uD83D\uDCAD"), /*#__PURE__*/React.createElement("span", {
-    className: "rem-txt"
-  }, /*#__PURE__*/React.createElement("b", null, "추억 이야기"), /*#__PURE__*/React.createElement("small", null, "옛 사진을 보며 함께 이야기 나눠요")), /*#__PURE__*/React.createElement("span", {
-    className: "rem-go"
-  }, "\u203A")), /*#__PURE__*/React.createElement("h2", {
+  }, "\uD83D\uDCAD 추억 이야기", /*#__PURE__*/React.createElement("span", {
+    className: "rem-sub"
+  }, "옛 사진을 보며 함께 이야기 나눠요")), /*#__PURE__*/React.createElement("h2", {
     style: {
       color: 'var(--muted)',
       fontSize: '1.05em',
